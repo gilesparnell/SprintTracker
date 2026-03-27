@@ -85,6 +85,13 @@ export async function updateSprint(
   return { success: true, sprint };
 }
 
+export async function completeSprint(db: DB, id: string): Promise<{ success: boolean }> {
+  await db.update(sprints)
+    .set({ status: "completed", updatedAt: new Date().toISOString() })
+    .where(eq(sprints.id, id));
+  return { success: true };
+}
+
 export async function deleteSprint(db: DB, id: string): Promise<{ success: boolean }> {
   await db.delete(sprints).where(eq(sprints.id, id));
   return { success: true };

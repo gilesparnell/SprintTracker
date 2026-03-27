@@ -17,10 +17,13 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const allSprints = await db
-    .select({ id: sprints.id, name: sprints.name })
+    .select({ id: sprints.id, name: sprints.name, status: sprints.status })
     .from(sprints)
     .orderBy(desc(sprints.createdAt))
     .all();
+
+  const activeSprints = allSprints.filter((s) => s.status !== "completed");
+  const completedSprints = allSprints.filter((s) => s.status === "completed");
 
   return (
     <div className="flex min-h-screen bg-gray-950">
@@ -49,13 +52,29 @@ export default async function DashboardLayout({
             Sprints
             <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-400" />
           </Link>
-          {allSprints.length > 0 && (
+          {activeSprints.length > 0 && (
             <div className="ml-4 pl-3 border-l border-gray-800 space-y-0.5 py-1">
-              {allSprints.map((s) => (
+              {activeSprints.map((s) => (
                 <Link
                   key={s.id}
                   href={`/sprints/${s.id}`}
                   className="block px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:text-gray-200 hover:bg-gray-800/50 transition-colors truncate"
+                >
+                  {s.name}
+                </Link>
+              ))}
+            </div>
+          )}
+          {completedSprints.length > 0 && (
+            <div className="ml-4 pl-3 border-l border-gray-800/50 space-y-0.5 py-1 mt-1">
+              <span className="block px-3 py-1 text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
+                Completed
+              </span>
+              {completedSprints.map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/sprints/${s.id}`}
+                  className="block px-3 py-1.5 rounded-lg text-xs text-gray-600 hover:text-gray-400 hover:bg-gray-800/50 transition-colors truncate"
                 >
                   {s.name}
                 </Link>

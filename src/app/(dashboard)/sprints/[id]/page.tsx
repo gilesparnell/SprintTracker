@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { sprints, tasks, syncLog } from "@/lib/db/schema";
 import { eq, count, and, sql } from "drizzle-orm";
-import { deleteSprint } from "@/lib/actions/sprints";
+import { deleteSprint, completeSprint } from "@/lib/actions/sprints";
 import { createTask, getTasksBySprintId } from "@/lib/actions/tasks";
 import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
 import { ClickUpClient } from "@/lib/clickup/client";
@@ -100,6 +100,12 @@ export default async function SprintDetailPage({
     "use server";
     await deleteSprint(db, id);
     redirect("/sprints");
+  }
+
+  async function handleComplete() {
+    "use server";
+    await completeSprint(db, id);
+    redirect(`/sprints/${id}`);
   }
 
   async function handleCreateTask(
@@ -203,6 +209,17 @@ export default async function SprintDetailPage({
               sprintId={id}
               sprintName={sprint.name}
             />
+          )}
+          {sprint.status !== "completed" && (
+            <form action={handleComplete}>
+              <button
+                type="submit"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-400 bg-blue-900/20 border border-blue-500/30 rounded-lg hover:bg-blue-900/40 transition-colors"
+              >
+                <CheckCircle2Icon className="w-3 h-3" />
+                Complete Sprint
+              </button>
+            </form>
           )}
           <DeleteSprintButton sprintName={sprint.name} action={handleDelete} />
         </div>

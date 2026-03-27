@@ -62,11 +62,29 @@ export default async function SprintsPage() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-3">
-          {sprintsWithCounts.map((sprint) => (
-            <SprintCard key={sprint.id} sprint={sprint} />
-          ))}
-        </div>
+        <>
+          <div className="space-y-3">
+            {sprintsWithCounts
+              .filter((s) => s.status !== "completed")
+              .map((sprint) => (
+                <SprintCard key={sprint.id} sprint={sprint} />
+              ))}
+          </div>
+          {sprintsWithCounts.some((s) => s.status === "completed") && (
+            <div className="mt-8">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                Completed
+              </h3>
+              <div className="space-y-3 opacity-60">
+                {sprintsWithCounts
+                  .filter((s) => s.status === "completed")
+                  .map((sprint) => (
+                    <SprintCard key={sprint.id} sprint={sprint} />
+                  ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

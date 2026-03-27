@@ -1,0 +1,1 @@
+ALTER TABLE `clickup_config` ADD `api_token` text;

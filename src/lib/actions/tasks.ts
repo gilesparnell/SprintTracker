@@ -4,10 +4,10 @@ import { eq, sql } from "drizzle-orm";
 import { tasks } from "@/lib/db/schema";
 import { taskSchema, type TaskInput } from "@/lib/validators/task";
 import { v4 as uuid } from "uuid";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DB = BetterSQLite3Database<any>;
+type DB = LibSQLDatabase<any>;
 
 export type TaskResult = {
   success: boolean;
@@ -35,7 +35,7 @@ export async function createTask(
   const id = uuid();
   const now = new Date().toISOString();
 
-  db.insert(tasks)
+  await db.insert(tasks)
     .values({
       id,
       sprintId,
@@ -45,10 +45,9 @@ export async function createTask(
       priority: parsed.data.priority,
       createdAt: now,
       updatedAt: now,
-    })
-    .run();
+    });
 
-  const task = db.select().from(tasks).where(eq(tasks.id, id)).get();
+  const task = await db.select().from(tasks).where(eq(tasks.id, id)).get();
   return { success: true, task };
 }
 
@@ -80,7 +79,7 @@ export async function updateTask(
     return { success: false, errors: fieldErrors };
   }
 
-  db.update(tasks)
+  await db.update(tasks)
     .set({
       title: parsed.data.title,
       description: parsed.data.description ?? null,
@@ -88,10 +87,9 @@ export async function updateTask(
       priority: parsed.data.priority,
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(tasks.id, id))
-    .run();
+    .where(eq(tasks.id, id));
 
-  const task = db.select().from(tasks).where(eq(tasks.id, id)).get();
+  const task = await db.select().from(tasks).where(eq(tasks.id, id)).get();
   return { success: true, task };
 }
 
@@ -100,16 +98,15 @@ export async function updateTaskStatus(
   id: string,
   status: "open" | "in_progress" | "done"
 ): Promise<TaskResult> {
-  db.update(tasks)
+  await db.update(tasks)
     .set({ status, updatedAt: new Date().toISOString() })
-    .where(eq(tasks.id, id))
-    .run();
+    .where(eq(tasks.id, id));
 
-  const task = db.select().from(tasks).where(eq(tasks.id, id)).get();
+  const task = await db.select().from(tasks).where(eq(tasks.id, id)).get();
   return { success: true, task };
 }
 
 export async function deleteTask(db: DB, id: string): Promise<{ success: boolean }> {
-  db.delete(tasks).where(eq(tasks.id, id)).run();
+  await db.delete(tasks).where(eq(tasks.id, id));
   return { success: true };
 }

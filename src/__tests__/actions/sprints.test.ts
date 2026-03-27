@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterAll, beforeAll } from "vitest";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { describe, it, expect, beforeEach, beforeAll } from "vitest";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import { migrate } from "drizzle-orm/libsql/migrator";
 import { eq } from "drizzle-orm";
 import { sprints, tasks } from "@/lib/db/schema";
 import { v4 as uuid } from "uuid";
@@ -14,22 +14,17 @@ import {
 } from "@/lib/actions/sprints";
 
 describe("Sprint Actions", () => {
-  let sqlite: InstanceType<typeof Database>;
   let db: ReturnType<typeof drizzle>;
 
-  beforeAll(() => {
-    sqlite = new Database(":memory:");
-    db = drizzle(sqlite);
-    migrate(db, { migrationsFolder: "./drizzle" });
+  beforeAll(async () => {
+    const client = createClient({ url: "file::memory:" });
+    db = drizzle(client);
+    await migrate(db, { migrationsFolder: "./drizzle" });
   });
 
-  beforeEach(() => {
-    db.delete(tasks).run();
-    db.delete(sprints).run();
-  });
-
-  afterAll(() => {
-    sqlite.close();
+  beforeEach(async () => {
+    await db.delete(tasks);
+    await db.delete(sprints);
   });
 
   it("should create a sprint with valid data", async () => {
@@ -119,15 +114,14 @@ describe("Sprint Actions", () => {
 
     // Add a task to the sprint
     const taskId = uuid();
-    db.insert(tasks)
+    await db.insert(tasks)
       .values({
         id: taskId,
         sprintId: created.sprint!.id,
         title: "Test task",
         status: "open",
         priority: "medium",
-      })
-      .run();
+      });
 
     const result = await deleteSprint(db, created.sprint!.id);
     expect(result.success).toBe(true);
@@ -135,7 +129,7 @@ describe("Sprint Actions", () => {
     const sprint = await getSprintById(db, created.sprint!.id);
     expect(sprint).toBeUndefined();
 
-    const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get();
+    const task = await db.select().from(tasks).where(eq(tasks.id, taskId)).get();
     expect(task).toBeUndefined();
   });
 });

@@ -2,10 +2,10 @@ import { eq } from "drizzle-orm";
 import { tasks, syncLog } from "@/lib/db/schema";
 import { v4 as uuid } from "uuid";
 import type { ClickUpClient } from "./client";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DB = BetterSQLite3Database<any>;
+type DB = LibSQLDatabase<any>;
 
 export async function syncTaskToClickUp(
   db: DB,
@@ -13,7 +13,7 @@ export async function syncTaskToClickUp(
   taskId: string,
   clickupListId: string
 ): Promise<void> {
-  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get();
+  const task = await db.select().from(tasks).where(eq(tasks.id, taskId)).get();
   if (!task) return;
 
   try {
@@ -23,32 +23,29 @@ export async function syncTaskToClickUp(
     });
 
     // Store the ClickUp task ID
-    db.update(tasks)
+    await db.update(tasks)
       .set({ clickupTaskId: cuTask.id, updatedAt: new Date().toISOString() })
-      .where(eq(tasks.id, taskId))
-      .run();
+      .where(eq(tasks.id, taskId));
 
     // Log success
-    db.insert(syncLog)
+    await db.insert(syncLog)
       .values({
         id: uuid(),
         taskId,
         action: "create",
         success: 1,
         errorMessage: null,
-      })
-      .run();
+      });
   } catch (e) {
     // Log failure — never throw
-    db.insert(syncLog)
+    await db.insert(syncLog)
       .values({
         id: uuid(),
         taskId,
         action: "create",
         success: 0,
         errorMessage: e instanceof Error ? e.message : String(e),
-      })
-      .run();
+      });
   }
 }
 
@@ -58,7 +55,7 @@ export async function syncTaskStatusToClickUp(
   taskId: string,
   clickupStatus: string
 ): Promise<void> {
-  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get();
+  const task = await db.select().from(tasks).where(eq(tasks.id, taskId)).get();
   if (!task || !task.clickupTaskId) return;
 
   try {
@@ -66,25 +63,23 @@ export async function syncTaskStatusToClickUp(
       status: clickupStatus,
     });
 
-    db.insert(syncLog)
+    await db.insert(syncLog)
       .values({
         id: uuid(),
         taskId,
         action: "status_update",
         success: 1,
         errorMessage: null,
-      })
-      .run();
+      });
   } catch (e) {
-    db.insert(syncLog)
+    await db.insert(syncLog)
       .values({
         id: uuid(),
         taskId,
         action: "status_update",
         success: 0,
         errorMessage: e instanceof Error ? e.message : String(e),
-      })
-      .run();
+      });
   }
 }
 

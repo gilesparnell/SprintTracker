@@ -4,6 +4,7 @@ import {
   SettingsIcon,
   ZapIcon,
 } from "lucide-react";
+import { BackgroundSlideshow } from "@/components/features/background-slideshow";
 
 export default function DashboardLayout({
   children,
@@ -56,7 +57,11 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main */}
-      <main className="flex-1 p-8 overflow-auto">{children}</main>
+      {/* Main */}
+      <main className="flex-1 overflow-auto">
+        <BackgroundSlideshow />
+        <div className="p-8">{children}</div>
+      </main>
     </div>
   );
 }

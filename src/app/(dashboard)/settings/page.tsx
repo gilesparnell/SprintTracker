@@ -1,8 +1,9 @@
 import { ClickUpHierarchyBrowser } from "@/components/features/clickup-hierarchy-browser";
-import { getClickUpConfig } from "@/lib/actions/clickup-config";
+import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
 
 export default async function SettingsPage() {
   const config = await getClickUpConfig();
+  const hasToken = !!(await getClickUpToken());
 
   return (
     <div className="max-w-5xl">
@@ -36,7 +37,7 @@ export default async function SettingsPage() {
           </div>
         </div>
 
-        <ClickUpHierarchyBrowser savedConfig={config} />
+        <ClickUpHierarchyBrowser savedConfig={config} hasToken={hasToken} />
       </div>
     </div>
   );

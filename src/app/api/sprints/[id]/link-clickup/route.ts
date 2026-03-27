@@ -4,7 +4,7 @@ import { sprints } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { ClickUpClient } from "@/lib/clickup/client";
 import { ensureClickUpList } from "@/lib/clickup/sync";
-import { getClickUpConfig } from "@/lib/actions/clickup-config";
+import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
 
 export async function POST(
   request: Request,
@@ -12,7 +12,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const token = process.env.CLICKUP_API_TOKEN;
+  const token = await getClickUpToken();
 
   if (!token) {
     return NextResponse.json(
@@ -21,7 +21,7 @@ export async function POST(
     );
   }
 
-  const sprint = db.select().from(sprints).where(eq(sprints.id, id)).get();
+  const sprint = await db.select().from(sprints).where(eq(sprints.id, id)).get();
   if (!sprint) {
     return NextResponse.json(
       { success: false, error: "Sprint not found" },
@@ -55,14 +55,13 @@ export async function POST(
     );
   }
 
-  db.update(sprints)
+  await db.update(sprints)
     .set({
       clickupListId: listId,
       clickupFolderId: config.folderId,
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(sprints.id, id))
-    .run();
+    .where(eq(sprints.id, id));
 
   return NextResponse.json({ success: true, listId });
 }

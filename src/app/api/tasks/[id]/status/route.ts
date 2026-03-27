@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { tasks, sprints } from "@/lib/db/schema";
+import { tasks } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { updateTaskStatus } from "@/lib/actions/tasks";
 import { ClickUpClient } from "@/lib/clickup/client";
 import { syncTaskStatusToClickUp } from "@/lib/clickup/sync";
-import { getClickUpConfig } from "@/lib/actions/clickup-config";
+import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
 
 export async function PATCH(
   request: Request,
@@ -16,12 +16,13 @@ export async function PATCH(
   const result = await updateTaskStatus(db, id, body.status);
 
   // Sync status to ClickUp if task is synced
-  const task = db.select().from(tasks).where(eq(tasks.id, id)).get();
-  if (task?.clickupTaskId && process.env.CLICKUP_API_TOKEN) {
+  const task = await db.select().from(tasks).where(eq(tasks.id, id)).get();
+  const clickUpToken = await getClickUpToken();
+  if (task?.clickupTaskId && clickUpToken) {
     const config = await getClickUpConfig();
     if (config) {
       const clickupStatus = config.statusMapping[body.status] ?? body.status;
-      const client = new ClickUpClient(process.env.CLICKUP_API_TOKEN);
+      const client = new ClickUpClient(clickUpToken);
       await syncTaskStatusToClickUp(db, client, id, clickupStatus);
     }
   }

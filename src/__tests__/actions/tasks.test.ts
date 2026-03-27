@@ -1,8 +1,7 @@
-import { describe, it, expect, beforeEach, afterAll, beforeAll } from "vitest";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { eq } from "drizzle-orm";
+import { describe, it, expect, beforeEach, beforeAll } from "vitest";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import { migrate } from "drizzle-orm/libsql/migrator";
 import { sprints, tasks } from "@/lib/db/schema";
 import { createSprint } from "@/lib/actions/sprints";
 import {
@@ -14,19 +13,18 @@ import {
 } from "@/lib/actions/tasks";
 
 describe("Task Actions", () => {
-  let sqlite: InstanceType<typeof Database>;
   let db: ReturnType<typeof drizzle>;
   let testSprintId: string;
 
-  beforeAll(() => {
-    sqlite = new Database(":memory:");
-    db = drizzle(sqlite);
-    migrate(db, { migrationsFolder: "./drizzle" });
+  beforeAll(async () => {
+    const client = createClient({ url: "file::memory:" });
+    db = drizzle(client);
+    await migrate(db, { migrationsFolder: "./drizzle" });
   });
 
   beforeEach(async () => {
-    db.delete(tasks).run();
-    db.delete(sprints).run();
+    await db.delete(tasks);
+    await db.delete(sprints);
 
     const result = await createSprint(db, {
       name: "Test Sprint",
@@ -34,10 +32,6 @@ describe("Task Actions", () => {
       endDate: "2026-04-10",
     });
     testSprintId = result.sprint!.id;
-  });
-
-  afterAll(() => {
-    sqlite.close();
   });
 
   it("should create a task with valid data", async () => {

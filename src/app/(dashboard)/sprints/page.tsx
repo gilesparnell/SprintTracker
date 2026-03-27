@@ -6,23 +6,25 @@ import { SprintCard } from "@/components/features/sprint-card";
 import { PlusIcon, ZapIcon } from "lucide-react";
 
 export default async function SprintsPage() {
-  const allSprints = db.select().from(sprints).orderBy(asc(sprints.startDate)).all();
+  const allSprints = await db.select().from(sprints).orderBy(asc(sprints.startDate)).all();
 
-  const sprintsWithCounts = allSprints.map((sprint) => {
-    const taskCounts = db
-      .select({ status: tasks.status, count: count() })
-      .from(tasks)
-      .where(eq(tasks.sprintId, sprint.id))
-      .groupBy(tasks.status)
-      .all();
+  const sprintsWithCounts = await Promise.all(
+    allSprints.map(async (sprint) => {
+      const taskCounts = await db
+        .select({ status: tasks.status, count: count() })
+        .from(tasks)
+        .where(eq(tasks.sprintId, sprint.id))
+        .groupBy(tasks.status)
+        .all();
 
-    const counts = { open: 0, in_progress: 0, done: 0 };
-    for (const tc of taskCounts) {
-      counts[tc.status as keyof typeof counts] = tc.count;
-    }
+      const counts = { open: 0, in_progress: 0, done: 0 };
+      for (const tc of taskCounts) {
+        counts[tc.status as keyof typeof counts] = tc.count;
+      }
 
-    return { ...sprint, taskCounts: counts };
-  });
+      return { ...sprint, taskCounts: counts };
+    })
+  );
 
   return (
     <div className="max-w-5xl">

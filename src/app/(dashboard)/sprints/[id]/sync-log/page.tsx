@@ -16,13 +16,13 @@ export default async function SyncLogPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const sprint = db.select().from(sprints).where(eq(sprints.id, id)).get();
+  const sprint = await db.select().from(sprints).where(eq(sprints.id, id)).get();
 
   if (!sprint) {
     notFound();
   }
 
-  const sprintTasks = db
+  const sprintTasks = await db
     .select({ id: tasks.id, title: tasks.title })
     .from(tasks)
     .where(eq(tasks.sprintId, id))
@@ -33,7 +33,7 @@ export default async function SyncLogPage({
 
   const logs =
     taskIds.length > 0
-      ? db
+      ? await db
           .select()
           .from(syncLog)
           .where(inArray(syncLog.taskId, taskIds))
@@ -114,7 +114,7 @@ export default async function SyncLogPage({
                     )}
                   </td>
                   <td className="px-6 py-4 text-xs text-gray-500 max-w-xs truncate">
-                    {log.errorMessage ?? "—"}
+                    {log.errorMessage ?? "\u2014"}
                   </td>
                   <td className="px-6 py-4 text-xs text-gray-500 font-mono">
                     {log.createdAt}

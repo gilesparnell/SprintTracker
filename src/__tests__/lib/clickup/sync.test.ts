@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import { migrate } from "drizzle-orm/libsql/migrator";
 import { eq } from "drizzle-orm";
 import { sprints, tasks, syncLog } from "@/lib/db/schema";
 import { createSprint } from "@/lib/actions/sprints";
@@ -12,26 +12,21 @@ import { ClickUpClient } from "@/lib/clickup/client";
 vi.mock("@/lib/clickup/client");
 
 describe("ClickUp Sync", () => {
-  let sqlite: InstanceType<typeof Database>;
   let db: ReturnType<typeof drizzle>;
   let mockClient: ClickUpClient;
 
-  beforeAll(() => {
-    sqlite = new Database(":memory:");
-    db = drizzle(sqlite);
-    migrate(db, { migrationsFolder: "./drizzle" });
+  beforeAll(async () => {
+    const client = createClient({ url: "file::memory:" });
+    db = drizzle(client);
+    await migrate(db, { migrationsFolder: "./drizzle" });
   });
 
-  beforeEach(() => {
-    db.delete(syncLog).run();
-    db.delete(tasks).run();
-    db.delete(sprints).run();
+  beforeEach(async () => {
+    await db.delete(syncLog);
+    await db.delete(tasks);
+    await db.delete(sprints);
     vi.clearAllMocks();
     mockClient = new ClickUpClient("pk_test");
-  });
-
-  afterAll(() => {
-    sqlite.close();
   });
 
   it("should sync a task to ClickUp and store the clickupTaskId", async () => {
@@ -42,10 +37,9 @@ describe("ClickUp Sync", () => {
     });
 
     // Link sprint to ClickUp
-    db.update(sprints)
+    await db.update(sprints)
       .set({ clickupListId: "list_123", clickupFolderId: "folder_456" })
-      .where(eq(sprints.id, sprint.sprint!.id))
-      .run();
+      .where(eq(sprints.id, sprint.sprint!.id));
 
     const task = await createTask(db, sprint.sprint!.id, { title: "Test task" });
 
@@ -63,11 +57,11 @@ describe("ClickUp Sync", () => {
     });
 
     // Verify clickupTaskId was stored
-    const updated = db.select().from(tasks).where(eq(tasks.id, task.task!.id)).get();
+    const updated = await db.select().from(tasks).where(eq(tasks.id, task.task!.id)).get();
     expect(updated!.clickupTaskId).toBe("cu_task_789");
 
     // Verify sync log
-    const logs = db.select().from(syncLog).all();
+    const logs = await db.select().from(syncLog).all();
     expect(logs).toHaveLength(1);
     expect(logs[0].success).toBe(1);
   });
@@ -87,11 +81,11 @@ describe("ClickUp Sync", () => {
     await syncTaskToClickUp(db, mockClient, task.task!.id, "list_123");
 
     // Task should NOT have clickupTaskId
-    const updated = db.select().from(tasks).where(eq(tasks.id, task.task!.id)).get();
+    const updated = await db.select().from(tasks).where(eq(tasks.id, task.task!.id)).get();
     expect(updated!.clickupTaskId).toBeNull();
 
     // Error should be logged
-    const logs = db.select().from(syncLog).all();
+    const logs = await db.select().from(syncLog).all();
     expect(logs).toHaveLength(1);
     expect(logs[0].success).toBe(0);
     expect(logs[0].errorMessage).toContain("API rate limit exceeded");
@@ -106,10 +100,9 @@ describe("ClickUp Sync", () => {
     const task = await createTask(db, sprint.sprint!.id, { title: "Test task" });
 
     // Set clickupTaskId
-    db.update(tasks)
+    await db.update(tasks)
       .set({ clickupTaskId: "cu_task_789" })
-      .where(eq(tasks.id, task.task!.id))
-      .run();
+      .where(eq(tasks.id, task.task!.id));
 
     vi.mocked(mockClient.updateTask).mockResolvedValue({
       id: "cu_task_789",
@@ -123,7 +116,7 @@ describe("ClickUp Sync", () => {
       status: "In Progress",
     });
 
-    const logs = db.select().from(syncLog).all();
+    const logs = await db.select().from(syncLog).all();
     expect(logs).toHaveLength(1);
     expect(logs[0].action).toBe("status_update");
     expect(logs[0].success).toBe(1);

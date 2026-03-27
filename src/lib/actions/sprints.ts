@@ -4,10 +4,10 @@ import { eq, asc } from "drizzle-orm";
 import { sprints } from "@/lib/db/schema";
 import { sprintSchema, type SprintInput } from "@/lib/validators/sprint";
 import { v4 as uuid } from "uuid";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DB = BetterSQLite3Database<any>;
+type DB = LibSQLDatabase<any>;
 
 export type SprintResult = {
   success: boolean;
@@ -30,7 +30,7 @@ export async function createSprint(db: DB, input: Partial<SprintInput>): Promise
   const id = uuid();
   const now = new Date().toISOString();
 
-  db.insert(sprints)
+  await db.insert(sprints)
     .values({
       id,
       name: parsed.data.name,
@@ -40,10 +40,9 @@ export async function createSprint(db: DB, input: Partial<SprintInput>): Promise
       status: parsed.data.status,
       createdAt: now,
       updatedAt: now,
-    })
-    .run();
+    });
 
-  const sprint = db.select().from(sprints).where(eq(sprints.id, id)).get();
+  const sprint = await db.select().from(sprints).where(eq(sprints.id, id)).get();
   return { success: true, sprint };
 }
 
@@ -71,7 +70,7 @@ export async function updateSprint(
     return { success: false, errors: fieldErrors };
   }
 
-  db.update(sprints)
+  await db.update(sprints)
     .set({
       name: parsed.data.name,
       goal: parsed.data.goal ?? null,
@@ -80,14 +79,13 @@ export async function updateSprint(
       status: parsed.data.status,
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(sprints.id, id))
-    .run();
+    .where(eq(sprints.id, id));
 
-  const sprint = db.select().from(sprints).where(eq(sprints.id, id)).get();
+  const sprint = await db.select().from(sprints).where(eq(sprints.id, id)).get();
   return { success: true, sprint };
 }
 
 export async function deleteSprint(db: DB, id: string): Promise<{ success: boolean }> {
-  db.delete(sprints).where(eq(sprints.id, id)).run();
+  await db.delete(sprints).where(eq(sprints.id, id));
   return { success: true };
 }

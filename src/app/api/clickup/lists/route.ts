@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { ClickUpClient } from "@/lib/clickup/client";
-import { getClickUpConfig } from "@/lib/actions/clickup-config";
+import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
 
 export async function GET() {
-  const token = process.env.CLICKUP_API_TOKEN;
+  const token = await getClickUpToken();
   if (!token) {
     return NextResponse.json({ lists: [] });
   }

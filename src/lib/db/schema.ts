@@ -43,6 +43,7 @@ export const tasks = sqliteTable("tasks", {
 
 export const clickupConfig = sqliteTable("clickup_config", {
   id: text("id").primaryKey(),
+  apiToken: text("api_token"),
   spaceId: text("space_id").notNull(),
   spaceName: text("space_name").notNull(),
   folderId: text("folder_id").notNull(),

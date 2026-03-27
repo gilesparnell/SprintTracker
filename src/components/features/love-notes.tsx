@@ -130,7 +130,7 @@ export function LoveNotes() {
         </span>
       </div>
       <p
-        className={`text-[11px] leading-relaxed text-pink-300/60 italic transition-opacity duration-400 ${
+        className={`text-[11px] leading-relaxed text-pink-200 italic transition-opacity duration-400 ${
           fade ? "opacity-100" : "opacity-0"
         }`}
       >

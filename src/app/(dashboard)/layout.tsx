@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import {
   LayoutDashboardIcon,
@@ -5,12 +7,21 @@ import {
   ZapIcon,
 } from "lucide-react";
 import { BackgroundSlideshow } from "@/components/features/background-slideshow";
+import { db } from "@/lib/db";
+import { sprints } from "@/lib/db/schema";
+import { desc } from "drizzle-orm";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const allSprints = await db
+    .select({ id: sprints.id, name: sprints.name })
+    .from(sprints)
+    .orderBy(desc(sprints.createdAt))
+    .all();
+
   return (
     <div className="flex min-h-screen bg-gray-950">
       {/* Sidebar */}
@@ -32,15 +43,28 @@ export default function DashboardLayout({
         <nav className="flex-1 px-3 py-4 space-y-1">
           <Link
             href="/sprints"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-green-500/10 text-green-400 border border-green-500/30 transition-all"
+            className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium bg-green-500/10 text-green-400 border border-green-500/30 transition-all"
           >
             <LayoutDashboardIcon className="w-4 h-4" />
             Sprints
             <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-400" />
           </Link>
+          {allSprints.length > 0 && (
+            <div className="ml-4 pl-3 border-l border-gray-800 space-y-0.5 py-1">
+              {allSprints.map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/sprints/${s.id}`}
+                  className="block px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:text-gray-200 hover:bg-gray-800/50 transition-colors truncate"
+                >
+                  {s.name}
+                </Link>
+              ))}
+            </div>
+          )}
           <Link
             href="/settings"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-gray-200 transition-all"
+            className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-gray-200 transition-all"
           >
             <SettingsIcon className="w-4 h-4" />
             Settings
@@ -56,7 +80,6 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      {/* Main */}
       {/* Main */}
       <main className="flex-1 overflow-auto">
         <BackgroundSlideshow />

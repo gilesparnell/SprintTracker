@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { sprints, tasks, syncLog } from "@/lib/db/schema";
 import { eq, count, and, sql } from "drizzle-orm";
-import { deleteSprint, completeSprint } from "@/lib/actions/sprints";
+import { deleteSprint, completeSprint, reopenSprint } from "@/lib/actions/sprints";
 import { createTask, getTasksBySprintId } from "@/lib/actions/tasks";
 import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
 import { ClickUpClient } from "@/lib/clickup/client";
@@ -108,6 +108,12 @@ export default async function SprintDetailPage({
     redirect(`/sprints/${id}`);
   }
 
+  async function handleReopen() {
+    "use server";
+    await reopenSprint(db, id);
+    redirect(`/sprints/${id}`);
+  }
+
   async function handleCreateTask(
     _prevState: { success: boolean; errors?: Record<string, string[]> },
     formData: FormData
@@ -210,7 +216,7 @@ export default async function SprintDetailPage({
               sprintName={sprint.name}
             />
           )}
-          {sprint.status !== "completed" && (
+          {sprint.status !== "completed" ? (
             <form action={handleComplete}>
               <button
                 type="submit"
@@ -218,6 +224,16 @@ export default async function SprintDetailPage({
               >
                 <CheckCircle2Icon className="w-3 h-3" />
                 Complete Sprint
+              </button>
+            </form>
+          ) : (
+            <form action={handleReopen}>
+              <button
+                type="submit"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-amber-400 bg-amber-900/20 border border-amber-500/30 rounded-lg hover:bg-amber-900/40 transition-colors"
+              >
+                <CircleDotIcon className="w-3 h-3" />
+                Reopen Sprint
               </button>
             </form>
           )}

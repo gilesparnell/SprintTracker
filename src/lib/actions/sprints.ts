@@ -85,16 +85,9 @@ export async function updateSprint(
   return { success: true, sprint };
 }
 
-export async function completeSprint(db: DB, id: string): Promise<{ success: boolean }> {
+export async function setSprintStatus(db: DB, id: string, status: "planning" | "active" | "completed"): Promise<{ success: boolean }> {
   await db.update(sprints)
-    .set({ status: "completed", updatedAt: new Date().toISOString() })
-    .where(eq(sprints.id, id));
-  return { success: true };
-}
-
-export async function reopenSprint(db: DB, id: string): Promise<{ success: boolean }> {
-  await db.update(sprints)
-    .set({ status: "active", updatedAt: new Date().toISOString() })
+    .set({ status, updatedAt: new Date().toISOString() })
     .where(eq(sprints.id, id));
   return { success: true };
 }

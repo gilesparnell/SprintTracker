@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { sprints, tasks, syncLog } from "@/lib/db/schema";
 import { eq, count, and, sql } from "drizzle-orm";
-import { deleteSprint, completeSprint, reopenSprint } from "@/lib/actions/sprints";
+import { deleteSprint, setSprintStatus } from "@/lib/actions/sprints";
 import { createTask, getTasksBySprintId } from "@/lib/actions/tasks";
 import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
 import { ClickUpClient } from "@/lib/clickup/client";
@@ -102,15 +102,21 @@ export default async function SprintDetailPage({
     redirect("/sprints");
   }
 
-  async function handleComplete() {
+  async function handleSetPlanning() {
     "use server";
-    await completeSprint(db, id);
+    await setSprintStatus(db, id, "planning");
     redirect(`/sprints/${id}`);
   }
 
-  async function handleReopen() {
+  async function handleSetActive() {
     "use server";
-    await reopenSprint(db, id);
+    await setSprintStatus(db, id, "active");
+    redirect(`/sprints/${id}`);
+  }
+
+  async function handleSetCompleted() {
+    "use server";
+    await setSprintStatus(db, id, "completed");
     redirect(`/sprints/${id}`);
   }
 
@@ -216,24 +222,36 @@ export default async function SprintDetailPage({
               sprintName={sprint.name}
             />
           )}
-          {sprint.status !== "completed" ? (
-            <form action={handleComplete}>
-              <button
-                type="submit"
-                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-400 bg-blue-900/20 border border-blue-500/30 rounded-lg hover:bg-blue-900/40 transition-colors"
-              >
-                <CheckCircle2Icon className="w-3 h-3" />
-                Complete Sprint
-              </button>
-            </form>
-          ) : (
-            <form action={handleReopen}>
+          {sprint.status !== "planning" && (
+            <form action={handleSetPlanning}>
               <button
                 type="submit"
                 className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-amber-400 bg-amber-900/20 border border-amber-500/30 rounded-lg hover:bg-amber-900/40 transition-colors"
               >
                 <CircleDotIcon className="w-3 h-3" />
-                Reopen Sprint
+                Planning
+              </button>
+            </form>
+          )}
+          {sprint.status !== "active" && (
+            <form action={handleSetActive}>
+              <button
+                type="submit"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-green-400 bg-green-900/20 border border-green-500/30 rounded-lg hover:bg-green-900/40 transition-colors"
+              >
+                <ClockIcon className="w-3 h-3" />
+                Active
+              </button>
+            </form>
+          )}
+          {sprint.status !== "completed" && (
+            <form action={handleSetCompleted}>
+              <button
+                type="submit"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-400 bg-blue-900/20 border border-blue-500/30 rounded-lg hover:bg-blue-900/40 transition-colors"
+              >
+                <CheckCircle2Icon className="w-3 h-3" />
+                Complete
               </button>
             </form>
           )}

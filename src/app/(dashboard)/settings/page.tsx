@@ -10,7 +10,34 @@ export default async function SettingsPage() {
       <p className="text-gray-400 text-sm mb-8">
         Configure integrations and preferences.
       </p>
-      <ClickUpHierarchyBrowser savedConfig={config} />
+
+      <div className="space-y-6">
+        <div className="bg-gray-900/30 border border-gray-800 rounded-2xl p-6">
+          <h3 className="text-lg font-bold text-white mb-2">How ClickUp sync works</h3>
+          <div className="space-y-3 text-sm text-gray-400">
+            <p>
+              Sprint Tracker can push tasks to ClickUp so your team stays in sync without duplicating work.
+              Here&apos;s how it works:
+            </p>
+            <ol className="list-decimal list-inside space-y-2 text-gray-300">
+              <li>
+                <strong>Choose a root folder below</strong> &mdash; this is the ClickUp folder where all your sprint Lists will be created.
+              </li>
+              <li>
+                <strong>Create a sprint</strong> in this app, then link it to ClickUp from the sprint detail page. This creates a new List inside your chosen folder, named after the sprint.
+              </li>
+              <li>
+                <strong>Add tasks</strong> to the sprint &mdash; they&apos;ll automatically be pushed to the linked ClickUp List. Status changes sync too.
+              </li>
+            </ol>
+            <p className="text-gray-500">
+              Sync is one-way (push only). Changes made in ClickUp won&apos;t flow back into this app.
+            </p>
+          </div>
+        </div>
+
+        <ClickUpHierarchyBrowser savedConfig={config} />
+      </div>
     </div>
   );
 }

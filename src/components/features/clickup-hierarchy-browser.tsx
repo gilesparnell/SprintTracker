@@ -112,32 +112,42 @@ export function ClickUpHierarchyBrowser({
           <LinkIcon className="w-5 h-5 text-green-400" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-white">ClickUp Integration</h3>
+          <h3 className="text-lg font-bold text-white">ClickUp Connection</h3>
           <p className="text-sm text-gray-400">
-            Connect your workspace to sync tasks
+            Choose the root folder where sprint Lists will be created
           </p>
         </div>
       </div>
 
       {savedConfig && (
-        <div className="bg-green-900/20 border border-green-500/30 rounded-xl px-4 py-3 flex items-center gap-2">
-          <CheckCircle2Icon className="w-4 h-4 text-green-400 shrink-0" />
-          <p className="text-sm text-green-400">
-            Connected to{" "}
-            <span className="font-medium text-white">{savedConfig.spaceName}</span>
-            {" / "}
-            <span className="font-medium text-white">{savedConfig.folderName}</span>
+        <div className="bg-green-900/20 border border-green-500/30 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2Icon className="w-4 h-4 text-green-400 shrink-0" />
+            <p className="text-sm text-green-400">
+              Sprints will sync to{" "}
+              <span className="font-medium text-white">{savedConfig.spaceName}</span>
+              {" / "}
+              <span className="font-medium text-white">{savedConfig.folderName}</span>
+            </p>
+          </div>
+          <p className="text-xs text-gray-500 mt-1 ml-6">
+            Each sprint you link will appear as a new List inside this folder.
           </p>
         </div>
       )}
 
       <div>
+        <h4 className="text-sm font-medium text-gray-300 mb-1">Step 1: Connect to ClickUp</h4>
         <p className="text-sm text-gray-400 mb-3">
-          Set your{" "}
+          Add your{" "}
           <code className="text-xs bg-gray-800 border border-gray-700 px-1.5 py-0.5 rounded-lg font-mono text-green-400">
             CLICKUP_API_TOKEN
           </code>{" "}
-          in .env.local, then test the connection.
+          to{" "}
+          <code className="text-xs bg-gray-800 border border-gray-700 px-1.5 py-0.5 rounded-lg font-mono text-gray-300">
+            .env.local
+          </code>
+          , then test the connection. You can generate a token in ClickUp under Settings &rarr; Apps.
         </p>
         <button
           onClick={handleTestConnection}
@@ -147,8 +157,10 @@ export function ClickUpHierarchyBrowser({
           {loading ? (
             <>
               <Loader2Icon className="w-4 h-4 animate-spin" />
-              Testing...
+              Connecting...
             </>
+          ) : savedConfig ? (
+            "Reconnect"
           ) : (
             "Test Connection"
           )}
@@ -169,72 +181,82 @@ export function ClickUpHierarchyBrowser({
       )}
 
       {workspaces.length > 0 && (
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-300">
-            Workspace
-          </label>
-          <Select onValueChange={handleWorkspaceSelect}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select workspace" />
-            </SelectTrigger>
-            <SelectContent>
-              {workspaces.map((ws) => (
-                <SelectItem key={ws.id} value={ws.id}>
-                  {ws.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+        <div className="space-y-4 border-t border-gray-800 pt-6">
+          <h4 className="text-sm font-medium text-gray-300">Step 2: Choose your root folder</h4>
+          <p className="text-sm text-gray-500">
+            Navigate to the folder where you want sprint Lists to live. In ClickUp, this maps to Workspace &rarr; Space &rarr; Folder.
+          </p>
 
-      {spaces.length > 0 && (
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-300">
-            Space
-          </label>
-          <Select onValueChange={handleSpaceSelect}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select space" />
-            </SelectTrigger>
-            <SelectContent>
-              {spaces.map((space) => (
-                <SelectItem key={space.id} value={space.id}>
-                  {space.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-300">
+              Workspace
+            </label>
+            <Select onValueChange={handleWorkspaceSelect}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select workspace" />
+              </SelectTrigger>
+              <SelectContent>
+                {workspaces.map((ws) => (
+                  <SelectItem key={ws.id} value={ws.id}>
+                    {ws.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {folders.length > 0 && (
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-300">
-            Folder (Sprint Folder)
-          </label>
-          <Select onValueChange={(v: string | null) => v && setSelectedFolder(v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select folder" />
-            </SelectTrigger>
-            <SelectContent>
-              {folders.map((folder) => (
-                <SelectItem key={folder.id} value={folder.id}>
-                  {folder.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+          {spaces.length > 0 && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">
+                Space
+              </label>
+              <Select onValueChange={handleSpaceSelect}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select space" />
+                </SelectTrigger>
+                <SelectContent>
+                  {spaces.map((space) => (
+                    <SelectItem key={space.id} value={space.id}>
+                      {space.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-      {selectedFolder && (
-        <button
-          onClick={handleSave}
-          className="w-full bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors"
-        >
-          Save Configuration
-        </button>
+          {folders.length > 0 && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">
+                Root Folder
+              </label>
+              <p className="text-xs text-gray-500">
+                This is the parent folder. Each sprint you link will create a new List inside it.
+              </p>
+              <Select onValueChange={(v: string | null) => v && setSelectedFolder(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select folder" />
+                </SelectTrigger>
+                <SelectContent>
+                  {folders.map((folder) => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {selectedFolder && (
+            <button
+              onClick={handleSave}
+              className="w-full bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors"
+            >
+              Save Root Folder
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

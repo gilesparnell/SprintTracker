@@ -24,11 +24,11 @@ describe("Task Actions", () => {
     migrate(db, { migrationsFolder: "./drizzle" });
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     db.delete(tasks).run();
     db.delete(sprints).run();
 
-    const result = createSprint(db, {
+    const result = await createSprint(db, {
       name: "Test Sprint",
       startDate: "2026-03-27",
       endDate: "2026-04-10",
@@ -40,8 +40,8 @@ describe("Task Actions", () => {
     sqlite.close();
   });
 
-  it("should create a task with valid data", () => {
-    const result = createTask(db, testSprintId, {
+  it("should create a task with valid data", async () => {
+    const result = await createTask(db, testSprintId, {
       title: "Build login page",
       description: "Create the login form",
       status: "open",
@@ -54,8 +54,8 @@ describe("Task Actions", () => {
     expect(result.task!.sprintId).toBe(testSprintId);
   });
 
-  it("should return validation error for missing title", () => {
-    const result = createTask(db, testSprintId, {
+  it("should return validation error for missing title", async () => {
+    const result = await createTask(db, testSprintId, {
       title: "",
     });
 
@@ -63,12 +63,12 @@ describe("Task Actions", () => {
     expect(result.errors).toBeDefined();
   });
 
-  it("should list tasks for a sprint ordered by status then creation date", () => {
-    createTask(db, testSprintId, { title: "Task A", status: "done" });
-    createTask(db, testSprintId, { title: "Task B", status: "open" });
-    createTask(db, testSprintId, { title: "Task C", status: "in_progress" });
+  it("should list tasks for a sprint ordered by status then creation date", async () => {
+    await createTask(db, testSprintId, { title: "Task A", status: "done" });
+    await createTask(db, testSprintId, { title: "Task B", status: "open" });
+    await createTask(db, testSprintId, { title: "Task C", status: "in_progress" });
 
-    const taskList = getTasksBySprintId(db, testSprintId);
+    const taskList = await getTasksBySprintId(db, testSprintId);
     expect(taskList).toHaveLength(3);
     // open first, then in_progress, then done
     expect(taskList[0].status).toBe("open");
@@ -76,10 +76,10 @@ describe("Task Actions", () => {
     expect(taskList[2].status).toBe("done");
   });
 
-  it("should update a task", () => {
-    const created = createTask(db, testSprintId, { title: "Original" });
+  it("should update a task", async () => {
+    const created = await createTask(db, testSprintId, { title: "Original" });
 
-    const result = updateTask(db, created.task!.id, {
+    const result = await updateTask(db, created.task!.id, {
       title: "Updated Title",
       description: "New description",
       priority: "urgent",
@@ -91,27 +91,27 @@ describe("Task Actions", () => {
     expect(result.task!.priority).toBe("urgent");
   });
 
-  it("should update task status only", () => {
-    const created = createTask(db, testSprintId, {
+  it("should update task status only", async () => {
+    const created = await createTask(db, testSprintId, {
       title: "My task",
       status: "open",
     });
 
-    const result = updateTaskStatus(db, created.task!.id, "in_progress");
+    const result = await updateTaskStatus(db, created.task!.id, "in_progress");
     expect(result.success).toBe(true);
 
-    const taskList = getTasksBySprintId(db, testSprintId);
+    const taskList = await getTasksBySprintId(db, testSprintId);
     const updated = taskList.find((t) => t.id === created.task!.id);
     expect(updated!.status).toBe("in_progress");
   });
 
-  it("should delete a task", () => {
-    const created = createTask(db, testSprintId, { title: "To delete" });
+  it("should delete a task", async () => {
+    const created = await createTask(db, testSprintId, { title: "To delete" });
 
-    const result = deleteTask(db, created.task!.id);
+    const result = await deleteTask(db, created.task!.id);
     expect(result.success).toBe(true);
 
-    const remaining = getTasksBySprintId(db, testSprintId);
+    const remaining = await getTasksBySprintId(db, testSprintId);
     expect(remaining).toHaveLength(0);
   });
 });

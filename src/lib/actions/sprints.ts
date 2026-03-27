@@ -6,7 +6,8 @@ import { sprintSchema, type SprintInput } from "@/lib/validators/sprint";
 import { v4 as uuid } from "uuid";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
-type DB = BetterSQLite3Database<Record<string, never>>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DB = BetterSQLite3Database<any>;
 
 export type SprintResult = {
   success: boolean;
@@ -14,7 +15,7 @@ export type SprintResult = {
   errors?: Record<string, string[]>;
 };
 
-export function createSprint(db: DB, input: Partial<SprintInput>): SprintResult {
+export async function createSprint(db: DB, input: Partial<SprintInput>): Promise<SprintResult> {
   const parsed = sprintSchema.safeParse(input);
   if (!parsed.success) {
     const fieldErrors: Record<string, string[]> = {};
@@ -46,19 +47,19 @@ export function createSprint(db: DB, input: Partial<SprintInput>): SprintResult 
   return { success: true, sprint };
 }
 
-export function getSprintById(db: DB, id: string) {
+export async function getSprintById(db: DB, id: string) {
   return db.select().from(sprints).where(eq(sprints.id, id)).get();
 }
 
-export function getAllSprints(db: DB) {
+export async function getAllSprints(db: DB) {
   return db.select().from(sprints).orderBy(asc(sprints.startDate)).all();
 }
 
-export function updateSprint(
+export async function updateSprint(
   db: DB,
   id: string,
   input: Partial<SprintInput>
-): SprintResult {
+): Promise<SprintResult> {
   const parsed = sprintSchema.safeParse(input);
   if (!parsed.success) {
     const fieldErrors: Record<string, string[]> = {};
@@ -86,7 +87,7 @@ export function updateSprint(
   return { success: true, sprint };
 }
 
-export function deleteSprint(db: DB, id: string): { success: boolean } {
+export async function deleteSprint(db: DB, id: string): Promise<{ success: boolean }> {
   db.delete(sprints).where(eq(sprints.id, id)).run();
   return { success: true };
 }

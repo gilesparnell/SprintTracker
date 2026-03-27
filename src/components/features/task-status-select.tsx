@@ -26,7 +26,7 @@ export function TaskStatusSelect({
   return (
     <Select
       defaultValue={currentStatus}
-      onValueChange={(value) => onStatusChange(taskId, value)}
+      onValueChange={(value: string | null) => value && onStatusChange(taskId, value)}
     >
       <SelectTrigger className="w-[140px]">
         <SelectValue />

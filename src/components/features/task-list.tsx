@@ -1,8 +1,11 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { TaskStatusSelect } from "./task-status-select";
+import {
+  CheckCircle2Icon,
+  ListTodoIcon,
+  Trash2Icon,
+} from "lucide-react";
 
 type Task = {
   id: string;
@@ -13,11 +16,34 @@ type Task = {
   clickupTaskId: string | null;
 };
 
-const priorityColors: Record<string, string> = {
-  low: "bg-gray-100 text-gray-800",
-  medium: "bg-blue-100 text-blue-800",
-  high: "bg-orange-100 text-orange-800",
-  urgent: "bg-red-100 text-red-800",
+const priorityConfig: Record<
+  string,
+  { label: string; bg: string; text: string; border: string }
+> = {
+  low: {
+    label: "Low",
+    bg: "bg-gray-800",
+    text: "text-gray-400",
+    border: "border-gray-700",
+  },
+  medium: {
+    label: "Medium",
+    bg: "bg-blue-900/20",
+    text: "text-blue-400",
+    border: "border-blue-500/30",
+  },
+  high: {
+    label: "High",
+    bg: "bg-amber-900/20",
+    text: "text-amber-400",
+    border: "border-amber-500/30",
+  },
+  urgent: {
+    label: "Urgent",
+    bg: "bg-red-900/20",
+    text: "text-red-400",
+    border: "border-red-500/30",
+  },
 };
 
 export function TaskList({
@@ -31,73 +57,94 @@ export function TaskList({
 }) {
   if (tasks.length === 0) {
     return (
-      <p className="text-muted-foreground">
-        No tasks yet. Add tasks to track your sprint progress.
-      </p>
+      <div className="border border-gray-800 border-dashed rounded-xl p-12 text-center">
+        <div className="w-12 h-12 bg-green-900/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+          <ListTodoIcon className="w-5 h-5 text-green-400" />
+        </div>
+        <p className="text-sm text-gray-400">
+          No tasks yet. Add tasks to track your sprint progress.
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="border rounded-lg">
+    <div className="border border-gray-800 rounded-xl overflow-hidden">
       <table className="w-full">
         <thead>
-          <tr className="border-b bg-muted/50">
-            <th className="text-left p-3 text-sm font-medium">Title</th>
-            <th className="text-left p-3 text-sm font-medium">Status</th>
-            <th className="text-left p-3 text-sm font-medium">Priority</th>
-            <th className="text-left p-3 text-sm font-medium">Sync</th>
-            <th className="text-right p-3 text-sm font-medium">Actions</th>
+          <tr className="border-b border-gray-800 text-left">
+            <th className="px-6 py-4 text-sm font-medium text-gray-400">
+              Title
+            </th>
+            <th className="px-6 py-4 text-sm font-medium text-gray-400">
+              Status
+            </th>
+            <th className="px-6 py-4 text-sm font-medium text-gray-400">
+              Priority
+            </th>
+            <th className="px-6 py-4 text-sm font-medium text-gray-400">
+              Sync
+            </th>
+            <th className="px-6 py-4 text-sm font-medium text-gray-400 text-right">
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody>
-          {tasks.map((task) => (
-            <tr key={task.id} className="border-b last:border-0">
-              <td className="p-3">
-                <div>
-                  <span className="font-medium">{task.title}</span>
-                  {task.description && (
-                    <p className="text-sm text-muted-foreground truncate max-w-md">
-                      {task.description}
-                    </p>
-                  )}
-                </div>
-              </td>
-              <td className="p-3">
-                <TaskStatusSelect
-                  taskId={task.id}
-                  currentStatus={task.status}
-                  onStatusChange={onStatusChange}
-                />
-              </td>
-              <td className="p-3">
-                <Badge className={priorityColors[task.priority] ?? ""}>
-                  {task.priority}
-                </Badge>
-              </td>
-              <td className="p-3">
-                {task.clickupTaskId ? (
-                  <Badge
-                    variant="outline"
-                    className="bg-green-50 text-green-700 border-green-200"
+          {tasks.map((task) => {
+            const priority = priorityConfig[task.priority] ?? priorityConfig.medium;
+            return (
+              <tr
+                key={task.id}
+                className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
+              >
+                <td className="px-6 py-4">
+                  <div>
+                    <span className="text-sm font-medium text-white">
+                      {task.title}
+                    </span>
+                    {task.description && (
+                      <p className="text-xs text-gray-500 truncate max-w-md mt-0.5">
+                        {task.description}
+                      </p>
+                    )}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <TaskStatusSelect
+                    taskId={task.id}
+                    currentStatus={task.status}
+                    onStatusChange={onStatusChange}
+                  />
+                </td>
+                <td className="px-6 py-4">
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 text-xs rounded-full border ${priority.bg} ${priority.text} ${priority.border}`}
                   >
-                    Synced
-                  </Badge>
-                ) : (
-                  <span className="text-sm text-muted-foreground">—</span>
-                )}
-              </td>
-              <td className="p-3 text-right">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => onDelete(task.id)}
-                >
-                  Delete
-                </Button>
-              </td>
-            </tr>
-          ))}
+                    {priority.label}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  {task.clickupTaskId ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-green-400">
+                      <CheckCircle2Icon className="w-3.5 h-3.5" />
+                      Synced
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-600">—</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <button
+                    onClick={() => onDelete(task.id)}
+                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors"
+                  >
+                    <Trash2Icon className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

@@ -35,7 +35,7 @@ describe("ClickUp Sync", () => {
   });
 
   it("should sync a task to ClickUp and store the clickupTaskId", async () => {
-    const sprint = createSprint(db, {
+    const sprint = await createSprint(db, {
       name: "Sprint 1",
       startDate: "2026-03-27",
       endDate: "2026-04-10",
@@ -47,7 +47,7 @@ describe("ClickUp Sync", () => {
       .where(eq(sprints.id, sprint.sprint!.id))
       .run();
 
-    const task = createTask(db, sprint.sprint!.id, { title: "Test task" });
+    const task = await createTask(db, sprint.sprint!.id, { title: "Test task" });
 
     vi.mocked(mockClient.createTask).mockResolvedValue({
       id: "cu_task_789",
@@ -59,7 +59,7 @@ describe("ClickUp Sync", () => {
 
     expect(mockClient.createTask).toHaveBeenCalledWith("list_123", {
       name: "Test task",
-      description: null,
+      description: undefined,
     });
 
     // Verify clickupTaskId was stored
@@ -73,12 +73,12 @@ describe("ClickUp Sync", () => {
   });
 
   it("should log error on sync failure without throwing", async () => {
-    const sprint = createSprint(db, {
+    const sprint = await createSprint(db, {
       name: "Sprint 1",
       startDate: "2026-03-27",
       endDate: "2026-04-10",
     });
-    const task = createTask(db, sprint.sprint!.id, { title: "Test task" });
+    const task = await createTask(db, sprint.sprint!.id, { title: "Test task" });
 
     vi.mocked(mockClient.createTask).mockRejectedValue(
       new Error("API rate limit exceeded")
@@ -98,12 +98,12 @@ describe("ClickUp Sync", () => {
   });
 
   it("should sync task status change to ClickUp", async () => {
-    const sprint = createSprint(db, {
+    const sprint = await createSprint(db, {
       name: "Sprint 1",
       startDate: "2026-03-27",
       endDate: "2026-04-10",
     });
-    const task = createTask(db, sprint.sprint!.id, { title: "Test task" });
+    const task = await createTask(db, sprint.sprint!.id, { title: "Test task" });
 
     // Set clickupTaskId
     db.update(tasks)
@@ -130,12 +130,12 @@ describe("ClickUp Sync", () => {
   });
 
   it("should not call ClickUp for tasks without clickupTaskId", async () => {
-    const sprint = createSprint(db, {
+    const sprint = await createSprint(db, {
       name: "Sprint 1",
       startDate: "2026-03-27",
       endDate: "2026-04-10",
     });
-    const task = createTask(db, sprint.sprint!.id, { title: "Test task" });
+    const task = await createTask(db, sprint.sprint!.id, { title: "Test task" });
 
     await syncTaskStatusToClickUp(db, mockClient, task.task!.id, "In Progress");
 

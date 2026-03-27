@@ -4,7 +4,8 @@ import { v4 as uuid } from "uuid";
 import type { ClickUpClient } from "./client";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
-type DB = BetterSQLite3Database<Record<string, never>>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DB = BetterSQLite3Database<any>;
 
 export async function syncTaskToClickUp(
   db: DB,
@@ -18,7 +19,7 @@ export async function syncTaskToClickUp(
   try {
     const cuTask = await client.createTask(clickupListId, {
       name: task.title,
-      description: task.description,
+      description: task.description ?? undefined,
     });
 
     // Store the ClickUp task ID

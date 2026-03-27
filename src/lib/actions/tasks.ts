@@ -6,7 +6,8 @@ import { taskSchema, type TaskInput } from "@/lib/validators/task";
 import { v4 as uuid } from "uuid";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
-type DB = BetterSQLite3Database<Record<string, never>>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DB = BetterSQLite3Database<any>;
 
 export type TaskResult = {
   success: boolean;
@@ -15,13 +16,11 @@ export type TaskResult = {
   syncWarning?: string;
 };
 
-const STATUS_ORDER = { open: 0, in_progress: 1, done: 2 };
-
-export function createTask(
+export async function createTask(
   db: DB,
   sprintId: string,
   input: Partial<TaskInput>
-): TaskResult {
+): Promise<TaskResult> {
   const parsed = taskSchema.safeParse(input);
   if (!parsed.success) {
     const fieldErrors: Record<string, string[]> = {};
@@ -53,8 +52,8 @@ export function createTask(
   return { success: true, task };
 }
 
-export function getTasksBySprintId(db: DB, sprintId: string) {
-  const allTasks = db
+export async function getTasksBySprintId(db: DB, sprintId: string) {
+  return db
     .select()
     .from(tasks)
     .where(eq(tasks.sprintId, sprintId))
@@ -63,15 +62,13 @@ export function getTasksBySprintId(db: DB, sprintId: string) {
       tasks.createdAt
     )
     .all();
-
-  return allTasks;
 }
 
-export function updateTask(
+export async function updateTask(
   db: DB,
   id: string,
   input: Partial<TaskInput>
-): TaskResult {
+): Promise<TaskResult> {
   const parsed = taskSchema.safeParse(input);
   if (!parsed.success) {
     const fieldErrors: Record<string, string[]> = {};
@@ -98,11 +95,11 @@ export function updateTask(
   return { success: true, task };
 }
 
-export function updateTaskStatus(
+export async function updateTaskStatus(
   db: DB,
   id: string,
   status: "open" | "in_progress" | "done"
-): TaskResult {
+): Promise<TaskResult> {
   db.update(tasks)
     .set({ status, updatedAt: new Date().toISOString() })
     .where(eq(tasks.id, id))
@@ -112,7 +109,7 @@ export function updateTaskStatus(
   return { success: true, task };
 }
 
-export function deleteTask(db: DB, id: string): { success: boolean } {
+export async function deleteTask(db: DB, id: string): Promise<{ success: boolean }> {
   db.delete(tasks).where(eq(tasks.id, id)).run();
   return { success: true };
 }

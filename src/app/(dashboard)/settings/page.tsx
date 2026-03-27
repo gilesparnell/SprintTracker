@@ -5,8 +5,11 @@ export default async function SettingsPage() {
   const config = await getClickUpConfig();
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">Settings</h2>
+    <div className="max-w-5xl">
+      <h2 className="text-3xl font-bold text-white mb-2">Settings</h2>
+      <p className="text-gray-400 text-sm mb-8">
+        Configure integrations and preferences.
+      </p>
       <ClickUpHierarchyBrowser savedConfig={config} />
     </div>
   );

@@ -1,10 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -47,40 +43,47 @@ export function TaskFormDialog({
 
   return (
     <Dialog>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogTrigger>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <form action={formAction} className="space-y-4">
-          <div>
-            <Label htmlFor="title">Title *</Label>
-            <Input
+          <div className="space-y-2">
+            <label htmlFor="title" className="block text-sm font-medium text-gray-300">
+              Title *
+            </label>
+            <input
               id="title"
               name="title"
               defaultValue={defaultValues?.title}
               placeholder="Task title"
+              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/50 transition-colors"
             />
             {state.errors?.title && (
-              <p className="text-sm text-destructive mt-1">
-                {state.errors.title[0]}
-              </p>
+              <p className="text-sm text-red-400">{state.errors.title[0]}</p>
             )}
           </div>
 
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Textarea
+          <div className="space-y-2">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-300">
+              Description
+            </label>
+            <textarea
               id="description"
               name="description"
               defaultValue={defaultValues?.description}
               placeholder="Optional description"
+              rows={3}
+              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 resize-none focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/50 transition-colors"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="status">Status</Label>
+            <div className="space-y-2">
+              <label htmlFor="status" className="block text-sm font-medium text-gray-300">
+                Status
+              </label>
               <Select
                 name="status"
                 defaultValue={defaultValues?.status ?? "open"}
@@ -95,8 +98,10 @@ export function TaskFormDialog({
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="priority">Priority</Label>
+            <div className="space-y-2">
+              <label htmlFor="priority" className="block text-sm font-medium text-gray-300">
+                Priority
+              </label>
               <Select
                 name="priority"
                 defaultValue={defaultValues?.priority ?? "medium"}
@@ -114,9 +119,13 @@ export function TaskFormDialog({
             </div>
           </div>
 
-          <Button type="submit" disabled={pending} className="w-full">
+          <button
+            type="submit"
+            disabled={pending}
+            className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors"
+          >
             {pending ? "Saving..." : "Save Task"}
-          </Button>
+          </button>
         </form>
       </DialogContent>
     </Dialog>

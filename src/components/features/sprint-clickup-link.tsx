@@ -67,10 +67,8 @@ export function SprintClickUpLink({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          Link to ClickUp
-        </Button>
+      <DialogTrigger render={<Button variant="outline" size="sm" />}>
+        Link to ClickUp
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -79,7 +77,7 @@ export function SprintClickUpLink({
         <div className="space-y-4">
           <div>
             <Label>Select an existing ClickUp List</Label>
-            <Select onValueChange={setSelectedList}>
+            <Select onValueChange={(v: string | null) => v && setSelectedList(v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a list" />
               </SelectTrigger>

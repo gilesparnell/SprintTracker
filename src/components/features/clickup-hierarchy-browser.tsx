@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -9,14 +8,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   testClickUpConnection,
   getClickUpSpaces,
   getClickUpFolders,
   saveClickUpConfig,
 } from "@/lib/actions/clickup-config";
+import {
+  CheckCircle2Icon,
+  LinkIcon,
+  Loader2Icon,
+  XCircleIcon,
+} from "lucide-react";
 
 type Workspace = { id: string; name: string };
 type Space = { id: string; name: string };
@@ -58,7 +61,8 @@ export function ClickUpHierarchyBrowser({
     }
   }
 
-  async function handleWorkspaceSelect(workspaceId: string) {
+  async function handleWorkspaceSelect(workspaceId: string | null) {
+    if (!workspaceId) return;
     setSelectedWorkspace(workspaceId);
     setSpaces([]);
     setFolders([]);
@@ -73,7 +77,8 @@ export function ClickUpHierarchyBrowser({
     }
   }
 
-  async function handleSpaceSelect(spaceId: string) {
+  async function handleSpaceSelect(spaceId: string | null) {
+    if (!spaceId) return;
     setSelectedSpace(spaceId);
     setFolders([]);
     setSelectedFolder("");
@@ -101,92 +106,136 @@ export function ClickUpHierarchyBrowser({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>ClickUp Integration</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {savedConfig && (
-          <div className="p-3 rounded-md bg-muted text-sm">
-            <strong>Current config:</strong> {savedConfig.spaceName} /{" "}
-            {savedConfig.folderName}
-          </div>
-        )}
-
-        <div>
-          <p className="text-sm text-muted-foreground mb-2">
-            Set your CLICKUP_API_TOKEN in .env.local, then test the connection.
-          </p>
-          <Button onClick={handleTestConnection} disabled={loading}>
-            {loading ? "Testing..." : "Test Connection"}
-          </Button>
+    <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 bg-green-900/20 rounded-xl flex items-center justify-center">
+          <LinkIcon className="w-5 h-5 text-green-400" />
         </div>
+        <div>
+          <h3 className="text-lg font-bold text-white">ClickUp Integration</h3>
+          <p className="text-sm text-gray-400">
+            Connect your workspace to sync tasks
+          </p>
+        </div>
+      </div>
 
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
-        {status && (
-          <p className="text-sm text-green-600">{status}</p>
-        )}
+      {savedConfig && (
+        <div className="bg-green-900/20 border border-green-500/30 rounded-xl px-4 py-3 flex items-center gap-2">
+          <CheckCircle2Icon className="w-4 h-4 text-green-400 shrink-0" />
+          <p className="text-sm text-green-400">
+            Connected to{" "}
+            <span className="font-medium text-white">{savedConfig.spaceName}</span>
+            {" / "}
+            <span className="font-medium text-white">{savedConfig.folderName}</span>
+          </p>
+        </div>
+      )}
 
-        {workspaces.length > 0 && (
-          <div>
-            <Label>Workspace</Label>
-            <Select onValueChange={handleWorkspaceSelect}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select workspace" />
-              </SelectTrigger>
-              <SelectContent>
-                {workspaces.map((ws) => (
-                  <SelectItem key={ws.id} value={ws.id}>
-                    {ws.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+      <div>
+        <p className="text-sm text-gray-400 mb-3">
+          Set your{" "}
+          <code className="text-xs bg-gray-800 border border-gray-700 px-1.5 py-0.5 rounded-lg font-mono text-green-400">
+            CLICKUP_API_TOKEN
+          </code>{" "}
+          in .env.local, then test the connection.
+        </p>
+        <button
+          onClick={handleTestConnection}
+          disabled={loading}
+          className="flex items-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors"
+        >
+          {loading ? (
+            <>
+              <Loader2Icon className="w-4 h-4 animate-spin" />
+              Testing...
+            </>
+          ) : (
+            "Test Connection"
+          )}
+        </button>
+      </div>
 
-        {spaces.length > 0 && (
-          <div>
-            <Label>Space</Label>
-            <Select onValueChange={handleSpaceSelect}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select space" />
-              </SelectTrigger>
-              <SelectContent>
-                {spaces.map((space) => (
-                  <SelectItem key={space.id} value={space.id}>
-                    {space.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+      {error && (
+        <div className="bg-red-900/20 border border-red-500/30 rounded-xl px-4 py-3 flex items-center gap-2">
+          <XCircleIcon className="w-4 h-4 text-red-400 shrink-0" />
+          <p className="text-sm text-red-400">{error}</p>
+        </div>
+      )}
+      {status && !error && (
+        <div className="bg-green-900/20 border border-green-500/30 rounded-xl px-4 py-3 flex items-center gap-2">
+          <CheckCircle2Icon className="w-4 h-4 text-green-400 shrink-0" />
+          <p className="text-sm text-green-400">{status}</p>
+        </div>
+      )}
 
-        {folders.length > 0 && (
-          <div>
-            <Label>Folder (Sprint Folder)</Label>
-            <Select onValueChange={setSelectedFolder}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select folder" />
-              </SelectTrigger>
-              <SelectContent>
-                {folders.map((folder) => (
-                  <SelectItem key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+      {workspaces.length > 0 && (
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-300">
+            Workspace
+          </label>
+          <Select onValueChange={handleWorkspaceSelect}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select workspace" />
+            </SelectTrigger>
+            <SelectContent>
+              {workspaces.map((ws) => (
+                <SelectItem key={ws.id} value={ws.id}>
+                  {ws.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
-        {selectedFolder && (
-          <Button onClick={handleSave}>Save Configuration</Button>
-        )}
-      </CardContent>
-    </Card>
+      {spaces.length > 0 && (
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-300">
+            Space
+          </label>
+          <Select onValueChange={handleSpaceSelect}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select space" />
+            </SelectTrigger>
+            <SelectContent>
+              {spaces.map((space) => (
+                <SelectItem key={space.id} value={space.id}>
+                  {space.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {folders.length > 0 && (
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-300">
+            Folder (Sprint Folder)
+          </label>
+          <Select onValueChange={(v: string | null) => v && setSelectedFolder(v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select folder" />
+            </SelectTrigger>
+            <SelectContent>
+              {folders.map((folder) => (
+                <SelectItem key={folder.id} value={folder.id}>
+                  {folder.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {selectedFolder && (
+        <button
+          onClick={handleSave}
+          className="w-full bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors"
+        >
+          Save Configuration
+        </button>
+      )}
+    </div>
   );
 }

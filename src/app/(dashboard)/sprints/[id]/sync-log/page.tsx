@@ -2,9 +2,13 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { sprints, tasks, syncLog } from "@/lib/db/schema";
 import { eq, desc, inArray } from "drizzle-orm";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import {
+  ArrowLeftIcon,
+  CheckCircle2Icon,
+  ScrollTextIcon,
+  XCircleIcon,
+} from "lucide-react";
 
 export default async function SyncLogPage({
   params,
@@ -18,7 +22,6 @@ export default async function SyncLogPage({
     notFound();
   }
 
-  // Get all task IDs for this sprint
   const sprintTasks = db
     .select({ id: tasks.id, title: tasks.title })
     .from(tasks)
@@ -28,7 +31,6 @@ export default async function SyncLogPage({
   const taskIds = sprintTasks.map((t) => t.id);
   const taskTitleMap = new Map(sprintTasks.map((t) => [t.id, t.title]));
 
-  // Get sync logs for these tasks
   const logs =
     taskIds.length > 0
       ? db
@@ -41,55 +43,80 @@ export default async function SyncLogPage({
       : [];
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold">Sync Log</h2>
-          <p className="text-muted-foreground">{sprint.name}</p>
-        </div>
-        <Link href={`/sprints/${id}`}>
-          <Button variant="outline">Back to Sprint</Button>
-        </Link>
+    <div className="max-w-5xl">
+      <Link
+        href={`/sprints/${id}`}
+        className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors mb-6"
+      >
+        <ArrowLeftIcon className="w-3.5 h-3.5" />
+        Back to Sprint
+      </Link>
+
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-white">Sync Log</h2>
+        <p className="text-gray-400 text-sm mt-1">{sprint.name}</p>
       </div>
 
       {logs.length === 0 ? (
-        <p className="text-muted-foreground">No sync activity yet.</p>
+        <div className="border border-gray-800 border-dashed rounded-xl p-12 text-center">
+          <div className="w-12 h-12 bg-green-900/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+            <ScrollTextIcon className="w-5 h-5 text-green-400" />
+          </div>
+          <p className="text-sm text-gray-400">No sync activity yet.</p>
+        </div>
       ) : (
-        <div className="border rounded-lg">
+        <div className="border border-gray-800 rounded-xl overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="text-left p-3 text-sm font-medium">Task</th>
-                <th className="text-left p-3 text-sm font-medium">Action</th>
-                <th className="text-left p-3 text-sm font-medium">Status</th>
-                <th className="text-left p-3 text-sm font-medium">Error</th>
-                <th className="text-left p-3 text-sm font-medium">Time</th>
+              <tr className="border-b border-gray-800 text-left">
+                <th className="px-6 py-4 text-sm font-medium text-gray-400">
+                  Task
+                </th>
+                <th className="px-6 py-4 text-sm font-medium text-gray-400">
+                  Action
+                </th>
+                <th className="px-6 py-4 text-sm font-medium text-gray-400">
+                  Status
+                </th>
+                <th className="px-6 py-4 text-sm font-medium text-gray-400">
+                  Error
+                </th>
+                <th className="px-6 py-4 text-sm font-medium text-gray-400">
+                  Time
+                </th>
               </tr>
             </thead>
             <tbody>
               {logs.map((log) => (
-                <tr key={log.id} className="border-b last:border-0">
-                  <td className="p-3 text-sm">
+                <tr
+                  key={log.id}
+                  className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
+                >
+                  <td className="px-6 py-4 text-sm font-medium text-white">
                     {taskTitleMap.get(log.taskId) ?? log.taskId}
                   </td>
-                  <td className="p-3">
-                    <Badge variant="outline">{log.action}</Badge>
+                  <td className="px-6 py-4">
+                    <span className="px-2 py-0.5 text-xs rounded-full border bg-gray-800 text-gray-400 border-gray-700 font-mono">
+                      {log.action}
+                    </span>
                   </td>
-                  <td className="p-3">
+                  <td className="px-6 py-4">
                     {log.success ? (
-                      <Badge className="bg-green-50 text-green-700 border-green-200">
+                      <span className="inline-flex items-center gap-1 text-xs text-green-400">
+                        <CheckCircle2Icon className="w-3.5 h-3.5" />
                         Success
-                      </Badge>
+                      </span>
                     ) : (
-                      <Badge className="bg-red-50 text-red-700 border-red-200">
+                      <span className="inline-flex items-center gap-1 text-xs text-red-400">
+                        <XCircleIcon className="w-3.5 h-3.5" />
                         Failed
-                      </Badge>
+                      </span>
                     )}
                   </td>
-                  <td className="p-3 text-sm text-muted-foreground max-w-xs truncate">
+                  <td className="px-6 py-4 text-xs text-gray-500 max-w-xs truncate">
                     {log.errorMessage ?? "—"}
                   </td>
-                  <td className="p-3 text-sm text-muted-foreground">
+                  <td className="px-6 py-4 text-xs text-gray-500 font-mono">
                     {log.createdAt}
                   </td>
                 </tr>

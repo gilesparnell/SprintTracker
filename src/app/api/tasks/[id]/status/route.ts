@@ -13,7 +13,7 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const result = updateTaskStatus(db, id, body.status);
+  const result = await updateTaskStatus(db, id, body.status);
 
   // Sync status to ClickUp if task is synced
   const task = db.select().from(tasks).where(eq(tasks.id, id)).get();

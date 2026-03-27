@@ -10,6 +10,7 @@ import { syncTaskToClickUp } from "@/lib/clickup/sync";
 import { TaskFormDialog } from "@/components/features/task-form";
 import { TaskListWrapper } from "@/components/features/task-list-wrapper";
 import { SprintClickUpLinkWrapper } from "@/components/features/sprint-clickup-link-wrapper";
+import { DeleteSprintButton } from "@/components/features/delete-sprint-button";
 import Link from "next/link";
 import {
   ArrowLeftIcon,
@@ -21,7 +22,6 @@ import {
   ListTodoIcon,
   PlusIcon,
   ScrollTextIcon,
-  Trash2Icon,
 } from "lucide-react";
 
 const statusConfig: Record<
@@ -204,15 +204,7 @@ export default async function SprintDetailPage({
               sprintName={sprint.name}
             />
           )}
-          <form action={handleDelete}>
-            <button
-              type="submit"
-              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-400 bg-red-900/20 border border-red-500/30 rounded-lg hover:bg-red-900/40 transition-colors"
-            >
-              <Trash2Icon className="w-3 h-3" />
-              Delete
-            </button>
-          </form>
+          <DeleteSprintButton sprintName={sprint.name} action={handleDelete} />
         </div>
       </div>
 

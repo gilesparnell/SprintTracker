@@ -5,6 +5,9 @@ import { eq, count } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { deleteSprint } from "@/lib/actions/sprints";
+import { createTask, getTasksBySprintId, updateTaskStatus, deleteTask } from "@/lib/actions/tasks";
+import { TaskFormDialog } from "@/components/features/task-form";
+import { TaskListWrapper } from "@/components/features/task-list-wrapper";
 import Link from "next/link";
 
 const statusColors: Record<string, string> = {
@@ -25,6 +28,8 @@ export default async function SprintDetailPage({
     notFound();
   }
 
+  const sprintTasks = getTasksBySprintId(db, id);
+
   const taskCounts = db
     .select({ status: tasks.status, count: count() })
     .from(tasks)
@@ -43,6 +48,26 @@ export default async function SprintDetailPage({
     "use server";
     deleteSprint(db, id);
     redirect("/sprints");
+  }
+
+  async function handleCreateTask(
+    _prevState: { success: boolean; errors?: Record<string, string[]> },
+    formData: FormData
+  ) {
+    "use server";
+
+    const result = createTask(db, id, {
+      title: formData.get("title") as string,
+      description: (formData.get("description") as string) || undefined,
+      status: (formData.get("status") as string) || "open",
+      priority: (formData.get("priority") as string) || "medium",
+    });
+
+    if (!result.success) {
+      return { success: false, errors: result.errors };
+    }
+
+    redirect(`/sprints/${id}`);
   }
 
   return (
@@ -68,9 +93,6 @@ export default async function SprintDetailPage({
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/sprints/${id}/edit`}>
-            <Button variant="outline">Edit</Button>
-          </Link>
           <form action={handleDelete}>
             <Button variant="destructive" type="submit">
               Delete
@@ -101,13 +123,13 @@ export default async function SprintDetailPage({
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Tasks</h3>
-          {/* Task creation will be added in Unit 3 */}
+          <TaskFormDialog
+            action={handleCreateTask}
+            trigger={<Button>Add Task</Button>}
+            title="New Task"
+          />
         </div>
-        <p className="text-muted-foreground">
-          {total === 0
-            ? "No tasks yet. Add tasks to track your sprint progress."
-            : "Task list will be rendered here."}
-        </p>
+        <TaskListWrapper sprintId={id} initialTasks={sprintTasks} />
       </div>
     </div>
   );

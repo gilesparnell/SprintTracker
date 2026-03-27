@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { ClickUpHierarchyBrowser } from "@/components/features/clickup-hierarchy-browser";
 import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
 

@@ -1,13 +1,17 @@
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { sprints, tasks } from "@/lib/db/schema";
-import { eq, count } from "drizzle-orm";
+import { sprints, tasks, syncLog } from "@/lib/db/schema";
+import { eq, count, and } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { deleteSprint } from "@/lib/actions/sprints";
-import { createTask, getTasksBySprintId, updateTaskStatus, deleteTask } from "@/lib/actions/tasks";
+import { createTask, getTasksBySprintId } from "@/lib/actions/tasks";
+import { getClickUpConfig } from "@/lib/actions/clickup-config";
+import { ClickUpClient } from "@/lib/clickup/client";
+import { syncTaskToClickUp } from "@/lib/clickup/sync";
 import { TaskFormDialog } from "@/components/features/task-form";
 import { TaskListWrapper } from "@/components/features/task-list-wrapper";
+import { SprintClickUpLinkWrapper } from "@/components/features/sprint-clickup-link-wrapper";
 import Link from "next/link";
 
 const statusColors: Record<string, string> = {
@@ -29,6 +33,7 @@ export default async function SprintDetailPage({
   }
 
   const sprintTasks = getTasksBySprintId(db, id);
+  const config = await getClickUpConfig();
 
   const taskCounts = db
     .select({ status: tasks.status, count: count() })
@@ -43,6 +48,18 @@ export default async function SprintDetailPage({
   }
 
   const total = counts.open + counts.in_progress + counts.done;
+
+  // Count sync errors for this sprint's tasks
+  const syncErrors = db
+    .select({ count: count() })
+    .from(syncLog)
+    .where(
+      and(
+        eq(syncLog.success, 0),
+        // Only count errors for tasks in this sprint
+      )
+    )
+    .get();
 
   async function handleDelete() {
     "use server";
@@ -67,6 +84,23 @@ export default async function SprintDetailPage({
       return { success: false, errors: result.errors };
     }
 
+    // Sync to ClickUp if sprint is linked
+    const currentSprint = db
+      .select()
+      .from(sprints)
+      .where(eq(sprints.id, id))
+      .get();
+
+    if (currentSprint?.clickupListId && process.env.CLICKUP_API_TOKEN) {
+      const client = new ClickUpClient(process.env.CLICKUP_API_TOKEN);
+      await syncTaskToClickUp(
+        db,
+        client,
+        result.task!.id,
+        currentSprint.clickupListId
+      );
+    }
+
     redirect(`/sprints/${id}`);
   }
 
@@ -80,7 +114,7 @@ export default async function SprintDetailPage({
               {sprint.status}
             </Badge>
             {sprint.clickupListId && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
                 ClickUp Linked
               </Badge>
             )}
@@ -93,6 +127,12 @@ export default async function SprintDetailPage({
           </p>
         </div>
         <div className="flex gap-2">
+          {config && !sprint.clickupListId && (
+            <SprintClickUpLinkWrapper
+              sprintId={id}
+              sprintName={sprint.name}
+            />
+          )}
           <form action={handleDelete}>
             <Button variant="destructive" type="submit">
               Delete
@@ -123,11 +163,20 @@ export default async function SprintDetailPage({
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Tasks</h3>
-          <TaskFormDialog
-            action={handleCreateTask}
-            trigger={<Button>Add Task</Button>}
-            title="New Task"
-          />
+          <div className="flex gap-2">
+            {sprint.clickupListId && (
+              <Link href={`/sprints/${id}/sync-log`}>
+                <Button variant="outline" size="sm">
+                  Sync Log
+                </Button>
+              </Link>
+            )}
+            <TaskFormDialog
+              action={handleCreateTask}
+              trigger={<Button>Add Task</Button>}
+              title="New Task"
+            />
+          </div>
         </div>
         <TaskListWrapper sprintId={id} initialTasks={sprintTasks} />
       </div>

@@ -7,6 +7,7 @@ import {
   ZapIcon,
 } from "lucide-react";
 import { BackgroundSlideshow } from "@/components/features/background-slideshow";
+import { LoveNotes } from "@/components/features/love-notes";
 import { db } from "@/lib/db";
 import { sprints } from "@/lib/db/schema";
 import { desc } from "drizzle-orm";
@@ -89,6 +90,11 @@ export default async function DashboardLayout({
             Settings
           </Link>
         </nav>
+
+        {/* Love Notes */}
+        <div className="border-t border-pink-500/10">
+          <LoveNotes />
+        </div>
 
         {/* Footer */}
         <div className="px-4 py-4 border-t border-gray-800">

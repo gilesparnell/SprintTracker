@@ -34,7 +34,7 @@ const TAG_COLORS = [
 ];
 
 function TagPicker({
-  allTags,
+  allTags: allTagsProp,
   selectedIds,
   onChange,
 }: {
@@ -45,6 +45,10 @@ function TagPicker({
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(TAG_COLORS[0]);
+  const [localTags, setLocalTags] = useState<Tag[]>([]);
+
+  // Combine server-provided tags with any created in this session
+  const allTags = [...allTagsProp, ...localTags.filter((lt) => !allTagsProp.some((t) => t.id === lt.id))];
 
   async function handleCreate() {
     if (!newName.trim()) return;
@@ -55,7 +59,7 @@ function TagPicker({
     });
     const tag = await res.json();
     if (tag?.id) {
-      allTags.push(tag);
+      setLocalTags((prev) => [...prev, tag]);
       onChange([...selectedIds, tag.id]);
     }
     setNewName("");
@@ -195,18 +199,28 @@ export function TaskFormDialog({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
   const dialogOpen = isControlled ? controlledOpen : uncontrolledOpen;
-  const setDialogOpen = isControlled ? (onOpenChange ?? (() => {})) : setUncontrolledOpen;
-
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
     defaultValues?.tagIds ?? []
   );
+
+  function handleOpenChange(open: boolean) {
+    if (open) {
+      // Reset tag selection to defaults when dialogue opens
+      setSelectedTagIds(defaultValues?.tagIds ?? []);
+    }
+    if (isControlled) {
+      onOpenChange?.(open);
+    } else {
+      setUncontrolledOpen(open);
+    }
+  }
 
   const [state, formAction, pending] = useActionState(action, {
     success: false,
   });
 
   return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+    <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
       {trigger && <DialogTrigger>{trigger}</DialogTrigger>}
       <DialogContent>
         <DialogHeader>

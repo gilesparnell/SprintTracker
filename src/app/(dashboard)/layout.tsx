@@ -7,7 +7,6 @@ import {
   SettingsIcon,
   ZapIcon,
 } from "lucide-react";
-import { BackgroundSlideshow } from "@/components/features/background-slideshow";
 import { LoveNotes } from "@/components/features/love-notes";
 import { MobileSidebarContent } from "@/components/features/mobile-sidebar";
 import { db } from "@/lib/db";
@@ -167,7 +166,6 @@ export default async function DashboardLayout({
 
       {/* Main */}
       <main className="flex-1 overflow-auto pt-14 md:pt-0">
-        <BackgroundSlideshow />
         <div className="p-4 md:p-8">{children}</div>
       </main>
     </div>

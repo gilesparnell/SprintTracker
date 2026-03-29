@@ -41,6 +41,7 @@ export function TagManager({ initialTags }: { initialTags: Tag[] }) {
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [editColor, setEditColor] = useState("");
 
   // Delete confirmation state
   const [deletingTag, setDeletingTag] = useState<Tag | null>(null);
@@ -66,19 +67,20 @@ export function TagManager({ initialTags }: { initialTags: Tag[] }) {
   function startEdit(tag: Tag) {
     setEditingId(tag.id);
     setEditName(tag.name);
+    setEditColor(tag.color);
   }
 
-  async function handleRename(tagId: string) {
+  async function handleSaveEdit(tagId: string) {
     if (!editName.trim()) return;
     const res = await fetch(`/api/tags/${tagId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editName.trim() }),
+      body: JSON.stringify({ name: editName.trim(), color: editColor }),
     });
     const updated = await res.json();
     if (updated?.id) {
       setTags((prev) =>
-        prev.map((t) => (t.id === tagId ? { ...t, name: updated.name } : t))
+        prev.map((t) => (t.id === tagId ? { ...t, name: updated.name, color: updated.color } : t))
           .sort((a, b) => a.name.localeCompare(b.name))
       );
     }
@@ -140,33 +142,48 @@ export function TagManager({ initialTags }: { initialTags: Tag[] }) {
           >
             <span
               className="w-3 h-3 rounded-full shrink-0"
-              style={{ backgroundColor: tag.color }}
+              style={{ backgroundColor: editingId === tag.id ? editColor : tag.color }}
             />
 
             {editingId === tag.id ? (
-              <div className="flex items-center gap-2 flex-1">
-                <input
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") { e.preventDefault(); handleRename(tag.id); }
-                    if (e.key === "Escape") setEditingId(null);
-                  }}
-                  className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:border-green-500/50"
-                  autoFocus
-                />
-                <button
-                  onClick={() => handleRename(tag.id)}
-                  className="p-1 text-green-400 hover:text-green-300 hover:bg-green-900/20 rounded-md transition-colors"
-                >
-                  <CheckIcon className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setEditingId(null)}
-                  className="p-1 text-gray-500 hover:text-gray-300 rounded-md transition-colors"
-                >
-                  <XIcon className="w-4 h-4" />
-                </button>
+              <div className="flex flex-col gap-2 flex-1">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); handleSaveEdit(tag.id); }
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:border-green-500/50"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => handleSaveEdit(tag.id)}
+                    className="p-1 text-green-400 hover:text-green-300 hover:bg-green-900/20 rounded-md transition-colors"
+                  >
+                    <CheckIcon className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setEditingId(null)}
+                    className="p-1 text-gray-500 hover:text-gray-300 rounded-md transition-colors"
+                  >
+                    <XIcon className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex gap-1">
+                  {TAG_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setEditColor(c)}
+                      className={`w-5 h-5 rounded-full border-2 transition-colors ${
+                        editColor === c ? "border-white" : "border-transparent"
+                      }`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
               </div>
             ) : (
               <>

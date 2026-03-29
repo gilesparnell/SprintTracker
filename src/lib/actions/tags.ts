@@ -23,8 +23,10 @@ export async function createTag(db: DB, name: string, color?: string) {
   return db.select().from(tags).where(eq(tags.id, id)).get();
 }
 
-export async function renameTag(db: DB, id: string, name: string) {
-  await db.update(tags).set({ name: name.trim() }).where(eq(tags.id, id));
+export async function renameTag(db: DB, id: string, name: string, color?: string) {
+  const updates: { name: string; color?: string } = { name: name.trim() };
+  if (color) updates.color = color;
+  await db.update(tags).set(updates).where(eq(tags.id, id));
   return db.select().from(tags).where(eq(tags.id, id)).get();
 }
 

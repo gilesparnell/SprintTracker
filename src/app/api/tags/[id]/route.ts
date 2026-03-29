@@ -7,11 +7,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { name } = await request.json();
+  const { name, color } = await request.json();
   if (!name?.trim()) {
     return NextResponse.json({ error: "Name required" }, { status: 400 });
   }
-  const tag = await renameTag(db, id, name);
+  const tag = await renameTag(db, id, name, color);
   return NextResponse.json(tag);
 }
 

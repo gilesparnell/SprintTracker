@@ -242,7 +242,13 @@ export function TaskFormDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <form action={formAction} className="space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            formAction(new FormData(e.currentTarget));
+          }}
+          className="space-y-4"
+        >
           <input type="hidden" name="tagIds" value={selectedTagIds.join(",")} />
 
           <div className="space-y-2">

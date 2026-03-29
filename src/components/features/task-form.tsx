@@ -220,17 +220,22 @@ export function TaskFormDialog({
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
     defaultValues?.tagIds ?? []
   );
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
+    defaultValues?.customerId ?? "__none__"
+  );
 
-  // Reset tag selection when dialogue opens or a different task is edited.
+  // Reset tag/customer selection when dialogue opens or a different task is edited.
   // Serialise tagIds to a string so the dependency is stable across renders
   // (defaultValues.tagIds is a new array reference each render).
   const tagIdsKey = (defaultValues?.tagIds ?? []).join(",");
+  const customerIdKey = defaultValues?.customerId ?? "__none__";
   useEffect(() => {
     if (dialogOpen) {
       setSelectedTagIds(defaultValues?.tagIds ?? []);
+      setSelectedCustomerId(defaultValues?.customerId ?? "__none__");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dialogOpen, tagIdsKey]);
+  }, [dialogOpen, tagIdsKey, customerIdKey]);
 
   function handleOpenChange(open: boolean) {
     if (isControlled) {
@@ -332,14 +337,32 @@ export function TaskFormDialog({
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-300">Customer</label>
-            <Select name="customerId" defaultValue={defaultValues?.customerId ?? "__none__"}>
+            <input type="hidden" name="customerId" value={selectedCustomerId} />
+            <Select value={selectedCustomerId} onValueChange={(v) => setSelectedCustomerId(v ?? "__none__")}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue>
+                  {selectedCustomerId === "__none__"
+                    ? "No customer"
+                    : (() => {
+                        const c = allCustomers.find((c) => c.id === selectedCustomerId);
+                        return c ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                            {c.name}
+                          </span>
+                        ) : "No customer";
+                      })()}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">No customer</SelectItem>
                 {allCustomers.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  <SelectItem key={c.id} value={c.id}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                      {c.name}
+                    </span>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

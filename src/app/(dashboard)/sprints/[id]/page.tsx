@@ -4,6 +4,7 @@ import { sprints, tasks, syncLog } from "@/lib/db/schema";
 import { eq, count, and, sql } from "drizzle-orm";
 import { deleteSprint, setSprintStatus } from "@/lib/actions/sprints";
 import { createTask, getTasksBySprintId } from "@/lib/actions/tasks";
+import { getAllTags, getTagsForTasks, setTaskTags } from "@/lib/actions/tags";
 import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
 import { ClickUpClient } from "@/lib/clickup/client";
 import { syncTaskToClickUp } from "@/lib/clickup/sync";
@@ -65,6 +66,12 @@ export default async function SprintDetailPage({
 
   const sprintTasks = await getTasksBySprintId(db, id);
   const config = await getClickUpConfig();
+  const allTags = await getAllTags(db);
+  const taskTagsMap = await getTagsForTasks(db, sprintTasks.map((t) => t.id));
+  const tasksWithTags = sprintTasks.map((t) => ({
+    ...t,
+    tags: taskTagsMap[t.id] ?? [],
+  }));
 
   const taskCounts = await db
     .select({ status: tasks.status, count: count() })
@@ -135,6 +142,13 @@ export default async function SprintDetailPage({
 
     if (!result.success) {
       return { success: false, errors: result.errors };
+    }
+
+    // Save tags
+    const tagIdsRaw = formData.get("tagIds") as string;
+    const tagIds = tagIdsRaw ? tagIdsRaw.split(",").filter(Boolean) : [];
+    if (tagIds.length > 0) {
+      await setTaskTags(db, result.task!.id, tagIds);
     }
 
     const currentSprint = await db
@@ -323,10 +337,11 @@ export default async function SprintDetailPage({
                 </button>
               }
               title="New Task"
+              allTags={allTags}
             />
           </div>
         </div>
-        <TaskListWrapper sprintId={id} initialTasks={sprintTasks} />
+        <TaskListWrapper sprintId={id} initialTasks={tasksWithTags} allTags={allTags} />
       </div>
     </div>
   );

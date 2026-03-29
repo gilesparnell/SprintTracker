@@ -15,17 +15,166 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { PlusIcon, XIcon } from "lucide-react";
+
+type Tag = {
+  id: string;
+  name: string;
+  color: string;
+};
 
 type FormState = {
   success: boolean;
   errors?: Record<string, string[]>;
 };
 
+const TAG_COLORS = [
+  "#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4",
+  "#3b82f6", "#8b5cf6", "#ec4899", "#6b7280",
+];
+
+function TagPicker({
+  allTags,
+  selectedIds,
+  onChange,
+}: {
+  allTags: Tag[];
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState(TAG_COLORS[0]);
+
+  async function handleCreate() {
+    if (!newName.trim()) return;
+    const res = await fetch("/api/tags", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName.trim(), color: newColor }),
+    });
+    const tag = await res.json();
+    if (tag?.id) {
+      allTags.push(tag);
+      onChange([...selectedIds, tag.id]);
+    }
+    setNewName("");
+    setCreating(false);
+  }
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-300">Tags</label>
+
+      {/* Selected tags */}
+      <div className="flex flex-wrap gap-1.5 min-h-[28px]">
+        {selectedIds.map((id) => {
+          const tag = allTags.find((t) => t.id === id);
+          if (!tag) return null;
+          return (
+            <span
+              key={id}
+              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-gray-700 text-gray-200 bg-gray-800"
+            >
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: tag.color }}
+              />
+              {tag.name}
+              <button
+                type="button"
+                onClick={() => onChange(selectedIds.filter((sid) => sid !== id))}
+                className="ml-0.5 text-gray-500 hover:text-gray-200"
+              >
+                <XIcon className="w-3 h-3" />
+              </button>
+            </span>
+          );
+        })}
+      </div>
+
+      {/* Available tags to add */}
+      <div className="flex flex-wrap gap-1.5">
+        {allTags
+          .filter((t) => !selectedIds.includes(t.id))
+          .map((tag) => (
+            <button
+              key={tag.id}
+              type="button"
+              onClick={() => onChange([...selectedIds, tag.id])}
+              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-gray-800 text-gray-400 hover:text-gray-200 hover:border-gray-600 transition-colors"
+            >
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: tag.color }}
+              />
+              {tag.name}
+            </button>
+          ))}
+
+        {/* Create new tag */}
+        {creating ? (
+          <div className="flex items-center gap-1.5">
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); handleCreate(); }
+                if (e.key === "Escape") setCreating(false);
+              }}
+              placeholder="Tag name"
+              className="w-24 bg-gray-800 border border-gray-700 rounded-lg px-2 py-0.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
+              autoFocus
+            />
+            <div className="flex gap-0.5">
+              {TAG_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setNewColor(c)}
+                  className={`w-4 h-4 rounded-full border-2 transition-colors ${
+                    newColor === c ? "border-white" : "border-transparent"
+                  }`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={handleCreate}
+              className="px-2 py-0.5 text-[10px] font-medium text-white bg-green-600 hover:bg-green-500 rounded-lg transition-colors"
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreating(false)}
+              className="text-gray-500 hover:text-gray-300"
+            >
+              <XIcon className="w-3 h-3" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className="inline-flex items-center gap-0.5 px-2 py-0.5 text-xs rounded-full border border-dashed border-gray-700 text-gray-500 hover:text-gray-300 hover:border-gray-500 transition-colors"
+          >
+            <PlusIcon className="w-3 h-3" />
+            New
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function TaskFormDialog({
   action,
   trigger,
   title,
   defaultValues,
+  allTags = [],
   open: controlledOpen,
   onOpenChange,
 }: {
@@ -37,7 +186,9 @@ export function TaskFormDialog({
     description?: string;
     status?: string;
     priority?: string;
+    tagIds?: string[];
   };
+  allTags?: Tag[];
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
@@ -45,6 +196,10 @@ export function TaskFormDialog({
   const isControlled = controlledOpen !== undefined;
   const dialogOpen = isControlled ? controlledOpen : uncontrolledOpen;
   const setDialogOpen = isControlled ? (onOpenChange ?? (() => {})) : setUncontrolledOpen;
+
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
+    defaultValues?.tagIds ?? []
+  );
 
   const [state, formAction, pending] = useActionState(action, {
     success: false,
@@ -58,6 +213,8 @@ export function TaskFormDialog({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <form action={formAction} className="space-y-4">
+          <input type="hidden" name="tagIds" value={selectedTagIds.join(",")} />
+
           <div className="space-y-2">
             <label htmlFor="title" className="block text-sm font-medium text-gray-300">
               Title *
@@ -127,6 +284,12 @@ export function TaskFormDialog({
               </Select>
             </div>
           </div>
+
+          <TagPicker
+            allTags={allTags}
+            selectedIds={selectedTagIds}
+            onChange={setSelectedTagIds}
+          />
 
           <button
             type="submit"

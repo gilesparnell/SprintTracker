@@ -14,6 +14,12 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
+type Tag = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type Task = {
   id: string;
   title: string;
@@ -21,6 +27,7 @@ type Task = {
   status: string;
   priority: string;
   clickupTaskId: string | null;
+  tags: Tag[];
 };
 
 const columns = [
@@ -132,6 +139,24 @@ function KanbanCard({
         <p className="text-xs text-gray-500 mt-1 line-clamp-1 leading-snug">
           {task.description}
         </p>
+      )}
+
+      {/* Tags */}
+      {task.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1.5">
+          {task.tags.map((tag) => (
+            <span
+              key={tag.id}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border border-gray-700/50 text-gray-300"
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: tag.color }}
+              />
+              {tag.name}
+            </span>
+          ))}
+        </div>
       )}
 
       {/* Delete button */}

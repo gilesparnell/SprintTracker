@@ -8,6 +8,12 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
+type Tag = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type Task = {
   id: string;
   title: string;
@@ -15,6 +21,7 @@ type Task = {
   status: string;
   priority: string;
   clickupTaskId: string | null;
+  tags: Tag[];
 };
 
 const priorityConfig: Record<
@@ -86,6 +93,9 @@ export function TaskList({
               Priority
             </th>
             <th className="px-6 py-4 text-sm font-medium text-gray-400">
+              Tags
+            </th>
+            <th className="px-6 py-4 text-sm font-medium text-gray-400">
               Sync
             </th>
             <th className="px-6 py-4 text-sm font-medium text-gray-400 text-right">
@@ -126,6 +136,25 @@ export function TaskList({
                   >
                     {priority.label}
                   </span>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex flex-wrap gap-1">
+                    {task.tags.map((tag) => (
+                      <span
+                        key={tag.id}
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border border-gray-700/50 text-gray-300"
+                      >
+                        <span
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        {tag.name}
+                      </span>
+                    ))}
+                    {task.tags.length === 0 && (
+                      <span className="text-xs text-gray-600">—</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   {task.clickupTaskId ? (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useActionState } from "react";
 import {
   Select,
@@ -33,6 +34,9 @@ export function SprintForm({
   };
   folders?: { id: string; name: string }[];
 }) {
+  const [selectedFolderId, setSelectedFolderId] = useState<string>(
+    defaultValues?.folderId ?? "__none__"
+  );
   const [state, formAction, pending] = useActionState(action, {
     success: false,
   });
@@ -123,9 +127,14 @@ export function SprintForm({
             <label htmlFor="folderId" className="block text-sm font-medium text-gray-300">
               Folder
             </label>
-            <Select name="folderId" defaultValue={defaultValues?.folderId ?? "__none__"}>
+            <input type="hidden" name="folderId" value={selectedFolderId} />
+            <Select value={selectedFolderId} onValueChange={(v) => setSelectedFolderId(v ?? "__none__")}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue>
+                  {selectedFolderId === "__none__"
+                    ? "No folder"
+                    : folders?.find((f) => f.id === selectedFolderId)?.name ?? "No folder"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">No folder</SelectItem>

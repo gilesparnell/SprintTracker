@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DragDropProvider, useDroppable } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { move } from "@dnd-kit/helpers";
@@ -254,18 +254,28 @@ export function KanbanBoard({
   onEdit: (task: Task) => void;
 }) {
   // Group tasks by status into a record of arrays
-  const [items, setItems] = useState<Record<string, Task[]>>(() => {
+  function groupTasks(taskList: Task[]) {
     const grouped: Record<string, Task[]> = {
       open: [],
       in_progress: [],
       done: [],
     };
-    for (const task of tasks) {
+    for (const task of taskList) {
       const col = grouped[task.status] ?? grouped.open;
       col.push(task);
     }
     return grouped;
-  });
+  }
+
+  const [items, setItems] = useState<Record<string, Task[]>>(() => groupTasks(tasks));
+
+  // Re-group when the tasks prop changes (e.g. tag filter applied).
+  // Use a stable key based on task IDs so drag-reorder doesn't trigger this.
+  const tasksKey = tasks.map((t) => t.id).sort().join(",");
+  useEffect(() => {
+    setItems(groupTasks(tasks));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasksKey]);
 
   return (
     <DragDropProvider

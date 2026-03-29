@@ -55,37 +55,64 @@ function SprintCardInner({ sprint }: { sprint: SprintWithCounts }) {
   const status = statusConfig[sprint.status] ?? statusConfig.planning;
 
   return (
-    <div className="group flex items-center gap-3 bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2.5 hover:border-gray-700 hover:bg-gray-900 transition-all cursor-pointer">
-      <h3 className="text-sm font-bold text-white truncate group-hover:text-green-400 transition-colors shrink-0 max-w-[200px]">
-        {sprint.name}
-      </h3>
-      <span
-        className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full border shrink-0 ${status.bg} ${status.text} ${status.border}`}
-      >
-        <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-        {status.label}
-      </span>
-      {sprint.goal && (
-        <p className="text-xs text-gray-500 truncate min-w-0">{sprint.goal}</p>
-      )}
-      <div className="flex items-center gap-3 ml-auto shrink-0 text-xs text-gray-500">
-        <span className="flex items-center gap-1">
-          <CalendarIcon className="w-3 h-3" />
-          {sprint.startDate} — {sprint.endDate}
+    <div className="group bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2.5 hover:border-gray-700 hover:bg-gray-900 transition-all cursor-pointer">
+      {/* Mobile: stacked layout */}
+      <div className="flex items-center gap-2 md:gap-3">
+        <h3 className="text-sm font-bold text-white truncate group-hover:text-green-400 transition-colors shrink min-w-0 md:shrink-0 md:max-w-[200px]">
+          {sprint.name}
+        </h3>
+        <span
+          className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full border shrink-0 ${status.bg} ${status.text} ${status.border}`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+          {status.label}
         </span>
+        {sprint.goal && (
+          <p className="hidden md:block text-xs text-gray-500 truncate min-w-0">{sprint.goal}</p>
+        )}
+        <div className="hidden md:flex items-center gap-3 ml-auto shrink-0 text-xs text-gray-500">
+          <span className="flex items-center gap-1">
+            <CalendarIcon className="w-3 h-3" />
+            {sprint.startDate} — {sprint.endDate}
+          </span>
+          <span className="flex items-center gap-1">
+            <CircleDotIcon className="w-3 h-3" />
+            {total}
+          </span>
+          {sprint.taskCounts.done > 0 && (
+            <span className="flex items-center gap-1 text-green-400/70">
+              <CheckCircle2Icon className="w-3 h-3" />
+              {sprint.taskCounts.done}
+            </span>
+          )}
+          {total > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-16 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-green-500 transition-all"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <span className="text-[10px] font-mono text-gray-500">
+                {Math.round(progress)}%
+              </span>
+            </div>
+          )}
+          {sprint.clickupListId && (
+            <LinkIcon className="w-3 h-3 text-green-400/60" />
+          )}
+        </div>
+        <ChevronRightIcon className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors ml-auto md:ml-0 shrink-0" />
+      </div>
+      {/* Mobile meta row */}
+      <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-500 md:hidden">
         <span className="flex items-center gap-1">
           <CircleDotIcon className="w-3 h-3" />
-          {total}
+          {total} tasks
         </span>
-        {sprint.taskCounts.done > 0 && (
-          <span className="flex items-center gap-1 text-green-400/70">
-            <CheckCircle2Icon className="w-3 h-3" />
-            {sprint.taskCounts.done}
-          </span>
-        )}
         {total > 0 && (
-          <div className="flex items-center gap-1.5">
-            <div className="w-16 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+          <div className="flex items-center gap-1.5 flex-1">
+            <div className="w-full max-w-[80px] h-1.5 rounded-full bg-gray-800 overflow-hidden">
               <div
                 className="h-full rounded-full bg-green-500 transition-all"
                 style={{ width: `${progress}%` }}
@@ -96,10 +123,6 @@ function SprintCardInner({ sprint }: { sprint: SprintWithCounts }) {
             </span>
           </div>
         )}
-        {sprint.clickupListId && (
-          <LinkIcon className="w-3 h-3 text-green-400/60" />
-        )}
-        <ChevronRightIcon className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
       </div>
     </div>
   );

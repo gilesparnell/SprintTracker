@@ -197,7 +197,7 @@ function KanbanColumn({
   return (
     <div
       ref={ref}
-      className={`flex flex-col min-w-[250px] flex-1 rounded-xl border transition-colors duration-200 ${
+      className={`flex flex-col min-w-0 md:min-w-[250px] flex-1 rounded-xl border transition-colors duration-200 ${
         isDropTarget
           ? `${column.borderColor} ${column.bgAccent}`
           : "border-gray-800/50 bg-gray-900/30"
@@ -293,7 +293,7 @@ export function KanbanBoard({
         });
       }}
     >
-      <div className="flex gap-2.5 overflow-x-auto pb-2">
+      <div className="flex flex-col md:flex-row gap-2.5 md:overflow-x-auto pb-2">
         {columns.map((column) => (
           <KanbanColumn
             key={column.id}

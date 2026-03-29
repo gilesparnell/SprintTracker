@@ -36,17 +36,18 @@ export default async function SprintsPage() {
 
   return (
     <div className="max-w-5xl">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-start md:items-center justify-between gap-4 mb-6 md:mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-white">Sprints</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-white">Sprints</h2>
           <p className="text-gray-400 text-sm mt-1">
             Manage your development cycles
           </p>
         </div>
-        <Link href="/sprints/new">
-          <button className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors">
+        <Link href="/sprints/new" className="shrink-0">
+          <button className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-sm font-medium transition-colors">
             <PlusIcon className="w-4 h-4" />
-            New Sprint
+            <span className="hidden sm:inline">New Sprint</span>
+            <span className="sm:hidden">New</span>
           </button>
         </Link>
       </div>

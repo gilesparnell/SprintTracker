@@ -69,7 +69,7 @@ export function SprintForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <label htmlFor="startDate" className="block text-sm font-medium text-gray-300">
             Start Date *
@@ -102,7 +102,7 @@ export function SprintForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <label htmlFor="status" className="block text-sm font-medium text-gray-300">
             Status

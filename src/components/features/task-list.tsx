@@ -79,8 +79,8 @@ export function TaskList({
   }
 
   return (
-    <div className="border border-gray-800 rounded-xl overflow-hidden">
-      <table className="w-full">
+    <div className="border border-gray-800 rounded-xl overflow-x-auto">
+      <table className="w-full min-w-[640px]">
         <thead>
           <tr className="border-b border-gray-800 text-left">
             <th className="px-6 py-4 text-sm font-medium text-gray-400">

@@ -209,14 +209,14 @@ export default async function SprintDetailPage({
   return (
     <div className="max-w-5xl">
       {/* Back + Title row */}
-      <div className="flex items-center gap-3 mb-2">
+      <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-2">
         <Link
           href="/sprints"
           className="text-gray-500 hover:text-white transition-colors"
         >
           <ArrowLeftIcon className="w-4 h-4" />
         </Link>
-        <h2 className="text-lg font-bold text-white">{sprint.name}</h2>
+        <h2 className="text-base md:text-lg font-bold text-white">{sprint.name}</h2>
         <span
           className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full border ${status.bg} ${status.text} ${status.border}`}
         >
@@ -229,84 +229,86 @@ export default async function SprintDetailPage({
             Synced
           </span>
         )}
-        <div className="ml-auto flex items-center gap-2">
-          {config && !sprint.clickupListId && (
-            <SprintClickUpLinkWrapper
-              sprintId={id}
-              sprintName={sprint.name}
-            />
-          )}
-          {sprint.status !== "planning" && (
-            <form action={handleSetPlanning}>
-              <button
-                type="submit"
-                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-amber-400 bg-amber-900/20 border border-amber-500/30 rounded-lg hover:bg-amber-900/40 transition-colors"
-              >
-                <CircleDotIcon className="w-3 h-3" />
-                Planning
-              </button>
-            </form>
-          )}
-          {sprint.status !== "active" && (
-            <form action={handleSetActive}>
-              <button
-                type="submit"
-                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-green-400 bg-green-900/20 border border-green-500/30 rounded-lg hover:bg-green-900/40 transition-colors"
-              >
-                <ClockIcon className="w-3 h-3" />
-                Active
-              </button>
-            </form>
-          )}
-          {sprint.status !== "completed" && (
-            <form action={handleSetCompleted}>
-              <button
-                type="submit"
-                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-400 bg-blue-900/20 border border-blue-500/30 rounded-lg hover:bg-blue-900/40 transition-colors"
-              >
-                <CheckCircle2Icon className="w-3 h-3" />
-                Complete
-              </button>
-            </form>
-          )}
-          <DeleteSprintButton sprintName={sprint.name} action={handleDelete} />
-        </div>
       </div>
 
-      {/* Meta + Stats single row */}
-      <div className="flex items-center gap-3 mb-3 text-xs text-gray-500">
+      {/* Status action buttons */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        {config && !sprint.clickupListId && (
+          <SprintClickUpLinkWrapper
+            sprintId={id}
+            sprintName={sprint.name}
+          />
+        )}
+        {sprint.status !== "planning" && (
+          <form action={handleSetPlanning}>
+            <button
+              type="submit"
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-amber-400 bg-amber-900/20 border border-amber-500/30 rounded-lg hover:bg-amber-900/40 transition-colors"
+            >
+              <CircleDotIcon className="w-3 h-3" />
+              Planning
+            </button>
+          </form>
+        )}
+        {sprint.status !== "active" && (
+          <form action={handleSetActive}>
+            <button
+              type="submit"
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-green-400 bg-green-900/20 border border-green-500/30 rounded-lg hover:bg-green-900/40 transition-colors"
+            >
+              <ClockIcon className="w-3 h-3" />
+              Active
+            </button>
+          </form>
+        )}
+        {sprint.status !== "completed" && (
+          <form action={handleSetCompleted}>
+            <button
+              type="submit"
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-400 bg-blue-900/20 border border-blue-500/30 rounded-lg hover:bg-blue-900/40 transition-colors"
+            >
+              <CheckCircle2Icon className="w-3 h-3" />
+              Complete
+            </button>
+          </form>
+        )}
+        <DeleteSprintButton sprintName={sprint.name} action={handleDelete} />
+      </div>
+
+      {/* Meta + Stats — wraps on mobile */}
+      <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-3 text-xs text-gray-500">
         {sprint.goal && (
           <>
             <span className="text-gray-400">{sprint.goal}</span>
-            <span className="text-gray-700">·</span>
+            <span className="text-gray-700 hidden md:inline">·</span>
           </>
         )}
         <span className="flex items-center gap-1">
           <CalendarIcon className="w-3 h-3" />
           {sprint.startDate} — {sprint.endDate}
         </span>
-        <span className="text-gray-700">·</span>
-        {statCards.map((stat) => (
-          <span key={stat.label} className={`flex items-center gap-1 ${stat.color}`}>
-            <stat.icon className="w-3 h-3" />
-            <span className="font-bold text-white">{stat.value}</span>
-            <span className="text-gray-600">{stat.label}</span>
-          </span>
-        ))}
+        <span className="text-gray-700 hidden md:inline">·</span>
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+          {statCards.map((stat) => (
+            <span key={stat.label} className={`flex items-center gap-1 ${stat.color}`}>
+              <stat.icon className="w-3 h-3" />
+              <span className="font-bold text-white">{stat.value}</span>
+              <span className="text-gray-600">{stat.label}</span>
+            </span>
+          ))}
+        </div>
         {total > 0 && (
-          <>
-            <div className="flex items-center gap-1.5 flex-1 min-w-0">
-              <div className="h-1 rounded-full bg-gray-800 overflow-hidden flex-1">
-                <div
-                  className="h-full rounded-full bg-green-500 transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <span className="font-mono text-[10px] text-green-400">
-                {Math.round(progress)}%
-              </span>
+          <div className="flex items-center gap-1.5 w-full md:w-auto md:flex-1 min-w-0">
+            <div className="h-1 rounded-full bg-gray-800 overflow-hidden flex-1">
+              <div
+                className="h-full rounded-full bg-green-500 transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
             </div>
-          </>
+            <span className="font-mono text-[10px] text-green-400">
+              {Math.round(progress)}%
+            </span>
+          </div>
         )}
       </div>
 

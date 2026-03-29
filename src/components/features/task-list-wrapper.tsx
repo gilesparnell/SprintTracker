@@ -107,7 +107,7 @@ export function TaskListWrapper({
   return (
     <div>
       {/* View toggle + tag filter */}
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-3 mb-3">
         {/* Tag filters */}
         {allTags.length > 0 && (
           <div className="flex items-center gap-1.5 flex-1 flex-wrap">

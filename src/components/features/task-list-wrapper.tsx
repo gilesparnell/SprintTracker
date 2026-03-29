@@ -44,9 +44,7 @@ export function TaskListWrapper({
           selectedTagIds.some((tagId) => t.tags.some((tt) => tt.id === tagId))
         );
 
-  // Collect all tags used in this sprint for the filter bar
-  const usedTagIds = new Set(initialTasks.flatMap((t) => t.tags.map((tt) => tt.id)));
-  const usedTags = allTags.filter((t) => usedTagIds.has(t.id));
+  // Show all tags in filter bar (not just used ones) so the feature is discoverable
 
   function toggleTag(tagId: string) {
     setSelectedTagIds((prev) =>
@@ -111,10 +109,10 @@ export function TaskListWrapper({
       {/* View toggle + tag filter */}
       <div className="flex items-center gap-3 mb-3">
         {/* Tag filters */}
-        {usedTags.length > 0 && (
+        {allTags.length > 0 && (
           <div className="flex items-center gap-1.5 flex-1 flex-wrap">
             <TagIcon className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-            {usedTags.map((tag) => {
+            {allTags.map((tag) => {
               const active = selectedTagIds.includes(tag.id);
               return (
                 <button

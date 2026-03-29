@@ -6,7 +6,7 @@ import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { useDroppable } from "@dnd-kit/react";
 import { move } from "@dnd-kit/helpers";
-import { SprintCard } from "./sprint-card";
+import { SprintCard, SprintCardContent } from "./sprint-card";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -46,6 +46,7 @@ function DraggableSprintCard({
   groupId: string;
   index: number;
 }) {
+  const router = useRouter();
   const { ref, isDragSource } = useSortable({
     id: sprint.id,
     index,
@@ -57,11 +58,12 @@ function DraggableSprintCard({
   return (
     <div
       ref={ref}
+      onClick={() => router.push(`/sprints/${sprint.id}`)}
       className={`relative cursor-grab active:cursor-grabbing ${
         isDragSource ? "opacity-40 scale-[0.98]" : ""
       }`}
     >
-      <SprintCard sprint={sprint} />
+      <SprintCardContent sprint={sprint} />
     </div>
   );
 }

@@ -65,50 +65,59 @@ function TagPicker({
     setCreating(false);
   }
 
+  const availableTags = allTags.filter((t) => !selectedIds.includes(t.id));
+
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium text-gray-300">Tags</label>
 
-      {/* Selected tags — click X to remove from this task */}
+      {/* Selected tags on this task — click X to remove */}
       {selectedIds.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {selectedIds.map((tagId) => {
-            const tag = allTags.find((t) => t.id === tagId);
-            if (!tag) return null;
-            return (
-              <button
-                key={tagId}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  onChange(selectedIds.filter((sid) => sid !== tagId));
-                }}
-                className="inline-flex items-center gap-1 pl-2 pr-1.5 py-1 text-xs rounded-full border border-gray-600 text-gray-200 bg-gray-800 hover:border-red-500/50 hover:bg-red-900/20 transition-colors group"
-              >
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: tag.color }}
-                />
-                {tag.name}
-                <XIcon className="w-3.5 h-3.5 text-gray-500 group-hover:text-red-400 transition-colors" />
-              </button>
-            );
-          })}
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">On this task</p>
+          <div className="flex flex-wrap gap-1.5">
+            {selectedIds.map((tagId) => {
+              const tag = allTags.find((t) => t.id === tagId);
+              if (!tag) return null;
+              return (
+                <button
+                  key={tagId}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onChange(selectedIds.filter((sid) => sid !== tagId));
+                  }}
+                  className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 text-xs rounded-full border border-green-500/40 text-white bg-green-900/30 hover:border-red-500/50 hover:bg-red-900/20 transition-colors group"
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: tag.color }}
+                  />
+                  {tag.name}
+                  <XIcon className="w-4 h-4 text-gray-400 group-hover:text-red-400 transition-colors" />
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
       {/* Available tags — click to add to this task */}
+      {(availableTags.length > 0 || selectedIds.length === 0) && (
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Available</p>
+        </div>
+      )}
       <div className="flex flex-wrap gap-1.5">
-        {allTags
-          .filter((t) => !selectedIds.includes(t.id))
-          .map((tag) => (
+        {availableTags.map((tag) => (
             <button
               key={tag.id}
               type="button"
               onClick={() => onChange([...selectedIds, tag.id])}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border border-gray-800 text-gray-400 hover:text-gray-200 hover:border-gray-600 transition-colors"
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border border-dashed border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors"
             >
+              <PlusIcon className="w-3 h-3" />
               <span
                 className="w-2 h-2 rounded-full shrink-0"
                 style={{ backgroundColor: tag.color }}
@@ -203,13 +212,16 @@ export function TaskFormDialog({
     defaultValues?.tagIds ?? []
   );
 
-  // Reset tag selection whenever defaultValues change (new task being edited)
-  // or when dialogue opens
+  // Reset tag selection when dialogue opens or a different task is edited.
+  // Serialise tagIds to a string so the dependency is stable across renders
+  // (defaultValues.tagIds is a new array reference each render).
+  const tagIdsKey = (defaultValues?.tagIds ?? []).join(",");
   useEffect(() => {
     if (dialogOpen) {
       setSelectedTagIds(defaultValues?.tagIds ?? []);
     }
-  }, [dialogOpen, defaultValues?.tagIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialogOpen, tagIdsKey]);
 
   function handleOpenChange(open: boolean) {
     if (isControlled) {

@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { PlusIcon, XIcon } from "lucide-react";
+import { PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 
 type Tag = {
   id: string;
@@ -37,10 +37,12 @@ function TagPicker({
   allTags: allTagsProp,
   selectedIds,
   onChange,
+  onDeleteTag,
 }: {
   allTags: Tag[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
+  onDeleteTag?: (tagId: string) => void;
 }) {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -72,13 +74,13 @@ function TagPicker({
 
       {/* Selected tags */}
       <div className="flex flex-wrap gap-1.5 min-h-[28px]">
-        {selectedIds.map((id) => {
-          const tag = allTags.find((t) => t.id === id);
+        {selectedIds.map((tagId) => {
+          const tag = allTags.find((t) => t.id === tagId);
           if (!tag) return null;
           return (
             <span
-              key={id}
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-gray-700 text-gray-200 bg-gray-800"
+              key={tagId}
+              className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 text-xs rounded-full border border-gray-700 text-gray-200 bg-gray-800"
             >
               <span
                 className="w-2 h-2 rounded-full shrink-0"
@@ -87,10 +89,15 @@ function TagPicker({
               {tag.name}
               <button
                 type="button"
-                onClick={() => onChange(selectedIds.filter((sid) => sid !== id))}
-                className="ml-0.5 text-gray-500 hover:text-gray-200"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const next = selectedIds.filter((sid) => sid !== tagId);
+                  onChange(next);
+                }}
+                className="p-1 text-gray-500 hover:text-red-400 rounded-full hover:bg-gray-700 transition-colors"
               >
-                <XIcon className="w-3 h-3" />
+                <XIcon className="w-3.5 h-3.5" />
               </button>
             </span>
           );
@@ -102,18 +109,34 @@ function TagPicker({
         {allTags
           .filter((t) => !selectedIds.includes(t.id))
           .map((tag) => (
-            <button
-              key={tag.id}
-              type="button"
-              onClick={() => onChange([...selectedIds, tag.id])}
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-gray-800 text-gray-400 hover:text-gray-200 hover:border-gray-600 transition-colors"
-            >
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: tag.color }}
-              />
-              {tag.name}
-            </button>
+            <span key={tag.id} className="inline-flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => onChange([...selectedIds, tag.id])}
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-gray-800 text-gray-400 hover:text-gray-200 hover:border-gray-600 transition-colors"
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: tag.color }}
+                />
+                {tag.name}
+              </button>
+              {onDeleteTag && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Delete tag "${tag.name}" from all tasks?`)) {
+                      onDeleteTag(tag.id);
+                    }
+                  }}
+                  className="p-0.5 text-gray-700 hover:text-red-400 rounded transition-colors"
+                  title="Delete tag"
+                >
+                  <Trash2Icon className="w-3 h-3" />
+                </button>
+              )}
+            </span>
           ))}
 
         {/* Create new tag */}
@@ -202,17 +225,27 @@ export function TaskFormDialog({
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
     defaultValues?.tagIds ?? []
   );
+  const [deletedTagIds, setDeletedTagIds] = useState<string[]>([]);
+
+  // Filter out deleted tags from allTags
+  const availableTags = allTags.filter((t) => !deletedTagIds.includes(t.id));
 
   function handleOpenChange(open: boolean) {
     if (open) {
-      // Reset tag selection to defaults when dialogue opens
       setSelectedTagIds(defaultValues?.tagIds ?? []);
+      setDeletedTagIds([]);
     }
     if (isControlled) {
       onOpenChange?.(open);
     } else {
       setUncontrolledOpen(open);
     }
+  }
+
+  async function handleDeleteTag(tagId: string) {
+    await fetch(`/api/tags/${tagId}`, { method: "DELETE" });
+    setDeletedTagIds((prev) => [...prev, tagId]);
+    setSelectedTagIds((prev) => prev.filter((id) => id !== tagId));
   }
 
   const [state, formAction, pending] = useActionState(action, {
@@ -300,9 +333,10 @@ export function TaskFormDialog({
           </div>
 
           <TagPicker
-            allTags={allTags}
+            allTags={availableTags}
             selectedIds={selectedTagIds}
             onChange={setSelectedTagIds}
+            onDeleteTag={handleDeleteTag}
           />
 
           <button

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { useDroppable } from "@dnd-kit/react";
+import { move } from "@dnd-kit/helpers";
 import { SprintCard } from "./sprint-card";
 import {
   ChevronDownIcon,
@@ -56,38 +57,33 @@ function DraggableSprintCard({
   return (
     <div
       ref={ref}
-      className={`relative ${isDragSource ? "opacity-40 scale-[0.98]" : ""}`}
+      className={`relative cursor-grab active:cursor-grabbing ${
+        isDragSource ? "opacity-40 scale-[0.98]" : ""
+      }`}
     >
-      <div className="absolute top-1/2 -left-6 -translate-y-1/2 opacity-0 group-hover/card:opacity-100 transition-opacity cursor-grab">
-        <GripVerticalIcon className="w-3.5 h-3.5 text-gray-600" />
-      </div>
-      <div className="group/card">
-        <SprintCard sprint={sprint} />
-      </div>
+      <SprintCard sprint={sprint} />
     </div>
   );
 }
 
-function FolderDropZone({
+function FolderSection({
   folder,
   sprints,
+  isDropTarget,
+  dropRef,
   onRename,
   onDelete,
 }: {
   folder: Folder;
   sprints: SprintWithCounts[];
+  isDropTarget: boolean;
+  dropRef: React.RefCallback<HTMLElement>;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(folder.name);
-
-  const { ref, isDropTarget } = useDroppable({
-    id: folder.id,
-    type: "folder",
-    accept: "sprint",
-  });
 
   function handleSaveRename() {
     if (editName.trim() && editName !== folder.name) {
@@ -98,7 +94,7 @@ function FolderDropZone({
 
   return (
     <div
-      ref={ref}
+      ref={dropRef}
       className={`rounded-xl border transition-colors ${
         isDropTarget
           ? "border-green-500/40 bg-green-500/5"
@@ -201,37 +197,60 @@ function FolderDropZone({
   );
 }
 
-function UnfiledDropZone({ sprints }: { sprints: SprintWithCounts[] }) {
+function FolderDropZone({
+  folder,
+  sprints,
+  onRename,
+  onDelete,
+}: {
+  folder: Folder;
+  sprints: SprintWithCounts[];
+  onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
+}) {
   const { ref, isDropTarget } = useDroppable({
-    id: "unfiled",
-    type: "folder",
+    id: folder.id,
+    type: "column",
     accept: "sprint",
   });
 
-  if (sprints.length === 0) {
-    return (
-      <div
-        ref={ref}
-        className={`rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
-          isDropTarget
-            ? "border-green-500/30 bg-green-500/5"
-            : "border-gray-800/30"
-        }`}
-      >
-        <p className="text-xs text-gray-600">
-          Drop sprints here to remove from folder
-        </p>
-      </div>
-    );
-  }
+  return (
+    <FolderSection
+      folder={folder}
+      sprints={sprints}
+      isDropTarget={isDropTarget}
+      dropRef={ref}
+      onRename={onRename}
+      onDelete={onDelete}
+    />
+  );
+}
+
+function UnfiledDropZone({ sprints }: { sprints: SprintWithCounts[] }) {
+  const { ref, isDropTarget } = useDroppable({
+    id: "unfiled",
+    type: "column",
+    accept: "sprint",
+  });
 
   return (
     <div
       ref={ref}
-      className={`space-y-2 rounded-xl p-1 transition-colors ${
-        isDropTarget ? "bg-green-500/5 ring-1 ring-green-500/30 rounded-xl" : ""
+      className={`space-y-2 rounded-xl p-2 min-h-[48px] transition-colors ${
+        isDropTarget ? "bg-green-500/5 ring-1 ring-green-500/30" : ""
       }`}
     >
+      {sprints.length === 0 && (
+        <div
+          className={`flex items-center justify-center h-12 border-2 border-dashed rounded-lg transition-colors ${
+            isDropTarget ? "border-green-500/30" : "border-gray-800/30"
+          }`}
+        >
+          <p className="text-xs text-gray-600">
+            Drop sprints here to remove from folder
+          </p>
+        </div>
+      )}
       {sprints.map((sprint, index) => (
         <DraggableSprintCard
           key={sprint.id}
@@ -255,16 +274,19 @@ export function SprintFolderList({
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
 
-  // Group sprints by folder
-  const sprintsByFolder: Record<string, SprintWithCounts[]> = { unfiled: [] };
-  for (const folder of initialFolders) {
-    sprintsByFolder[folder.id] = [];
-  }
-  for (const sprint of initialSprints.filter((s) => s.status !== "completed")) {
-    const key = sprint.folderId ?? "unfiled";
-    if (!sprintsByFolder[key]) sprintsByFolder[key] = [];
-    sprintsByFolder[key].push(sprint);
-  }
+  // Build grouped state for dnd-kit move() helper
+  const [items, setItems] = useState<Record<string, SprintWithCounts[]>>(() => {
+    const grouped: Record<string, SprintWithCounts[]> = { unfiled: [] };
+    for (const folder of initialFolders) {
+      grouped[folder.id] = [];
+    }
+    for (const sprint of initialSprints.filter((s) => s.status !== "completed")) {
+      const key = sprint.folderId ?? "unfiled";
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(sprint);
+    }
+    return grouped;
+  });
 
   const completedSprints = initialSprints.filter(
     (s) => s.status === "completed"
@@ -307,22 +329,31 @@ export function SprintFolderList({
 
   return (
     <DragDropProvider
+      onDragOver={(event) => {
+        setItems((prev) => move(prev, event));
+      }}
       onDragEnd={(event) => {
-        const draggedId = event.operation.source?.id;
-        const targetGroup = event.operation.target?.id;
+        setItems((prev) => {
+          const next = move(prev, event);
 
-        if (draggedId && targetGroup) {
-          // Find original folder
-          const sprint = initialSprints.find((s) => s.id === draggedId);
-          const originalFolder = sprint?.folderId ?? "unfiled";
-          const newFolder = String(targetGroup);
+          // Find which folder the dragged sprint ended up in
+          const draggedId = event.operation.source?.id;
+          if (draggedId) {
+            const sprint = initialSprints.find((s) => s.id === draggedId);
+            const originalFolder = sprint?.folderId ?? "unfiled";
 
-          // Only call API if folder actually changed
-          if (originalFolder !== newFolder) {
-            const newFolderId = newFolder === "unfiled" ? null : newFolder;
-            handleMoveSprint(String(draggedId), newFolderId);
+            for (const [groupId, groupSprints] of Object.entries(next)) {
+              const found = groupSprints.find((s) => s.id === draggedId);
+              if (found && groupId !== originalFolder) {
+                const newFolderId = groupId === "unfiled" ? null : groupId;
+                handleMoveSprint(String(draggedId), newFolderId);
+                break;
+              }
+            }
           }
-        }
+
+          return next;
+        });
       }}
     >
       <div className="space-y-4">
@@ -370,21 +401,19 @@ export function SprintFolderList({
           <FolderDropZone
             key={folder.id}
             folder={folder}
-            sprints={sprintsByFolder[folder.id] ?? []}
+            sprints={items[folder.id] ?? []}
             onRename={handleRenameFolder}
             onDelete={handleDeleteFolder}
           />
         ))}
 
         {/* Unfiled sprints */}
-        {(sprintsByFolder.unfiled?.length ?? 0) > 0 && initialFolders.length > 0 && (
-          <div>
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-              Unfiled
-            </h3>
-          </div>
+        {initialFolders.length > 0 && (items.unfiled?.length ?? 0) > 0 && (
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Unfiled
+          </h3>
         )}
-        <UnfiledDropZone sprints={sprintsByFolder.unfiled ?? []} />
+        <UnfiledDropZone sprints={items.unfiled ?? []} />
 
         {/* Completed sprints (not draggable) */}
         {completedSprints.length > 0 && (

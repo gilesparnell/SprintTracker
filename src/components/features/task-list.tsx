@@ -54,6 +54,82 @@ const priorityConfig: Record<
   },
 };
 
+function MobileTaskCard({
+  task,
+  onStatusChange,
+  onDelete,
+  onEdit,
+}: {
+  task: Task;
+  onStatusChange: (taskId: string, status: string) => void;
+  onDelete: (taskId: string) => void;
+  onEdit: (task: Task) => void;
+}) {
+  const priority = priorityConfig[task.priority] ?? priorityConfig.medium;
+
+  return (
+    <div className="border border-gray-800 rounded-xl p-4 hover:bg-gray-800/30 transition-colors">
+      {/* Title — full width */}
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-white">{task.title}</p>
+          {task.description && (
+            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+              {task.description}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => onEdit(task)}
+            className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <PencilIcon className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onDelete(task.id)}
+            className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <Trash2Icon className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Metadata row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <TaskStatusSelect
+          taskId={task.id}
+          currentStatus={task.status}
+          onStatusChange={onStatusChange}
+        />
+        <span
+          className={`inline-flex items-center px-2 py-0.5 text-xs rounded-full border ${priority.bg} ${priority.text} ${priority.border}`}
+        >
+          {priority.label}
+        </span>
+        {task.clickupTaskId && (
+          <span className="inline-flex items-center gap-1 text-xs text-green-400">
+            <CheckCircle2Icon className="w-3 h-3" />
+            Synced
+          </span>
+        )}
+        {task.tags.map((tag) => (
+          <span
+            key={tag.id}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border border-gray-700/50 text-gray-300"
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: tag.color }}
+            />
+            {tag.name}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function TaskList({
   tasks,
   onStatusChange,
@@ -79,114 +155,130 @@ export function TaskList({
   }
 
   return (
-    <div className="border border-gray-800 rounded-xl overflow-x-auto">
-      <table className="w-full min-w-[640px]">
-        <thead>
-          <tr className="border-b border-gray-800 text-left">
-            <th className="px-6 py-4 text-sm font-medium text-gray-400">
-              Title
-            </th>
-            <th className="px-6 py-4 text-sm font-medium text-gray-400">
-              Status
-            </th>
-            <th className="px-6 py-4 text-sm font-medium text-gray-400">
-              Priority
-            </th>
-            <th className="px-6 py-4 text-sm font-medium text-gray-400">
-              Tags
-            </th>
-            <th className="px-6 py-4 text-sm font-medium text-gray-400">
-              Sync
-            </th>
-            <th className="px-6 py-4 text-sm font-medium text-gray-400 text-right">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {tasks.map((task) => {
-            const priority = priorityConfig[task.priority] ?? priorityConfig.medium;
-            return (
-              <tr
-                key={task.id}
-                className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
-              >
-                <td className="px-6 py-4">
-                  <div>
-                    <span className="text-sm font-medium text-white">
-                      {task.title}
-                    </span>
-                    {task.description && (
-                      <p className="text-xs text-gray-500 truncate max-w-md mt-0.5">
-                        {task.description}
-                      </p>
-                    )}
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <TaskStatusSelect
-                    taskId={task.id}
-                    currentStatus={task.status}
-                    onStatusChange={onStatusChange}
-                  />
-                </td>
-                <td className="px-6 py-4">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 text-xs rounded-full border ${priority.bg} ${priority.text} ${priority.border}`}
-                  >
-                    {priority.label}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-wrap gap-1">
-                    {task.tags.map((tag) => (
-                      <span
-                        key={tag.id}
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border border-gray-700/50 text-gray-300"
-                      >
-                        <span
-                          className="w-1.5 h-1.5 rounded-full shrink-0"
-                          style={{ backgroundColor: tag.color }}
-                        />
-                        {tag.name}
+    <>
+      {/* Mobile: card layout */}
+      <div className="md:hidden space-y-2">
+        {tasks.map((task) => (
+          <MobileTaskCard
+            key={task.id}
+            task={task}
+            onStatusChange={onStatusChange}
+            onDelete={onDelete}
+            onEdit={onEdit}
+          />
+        ))}
+      </div>
+
+      {/* Desktop: table layout */}
+      <div className="hidden md:block border border-gray-800 rounded-xl overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-gray-800 text-left">
+              <th className="px-6 py-4 text-sm font-medium text-gray-400">
+                Title
+              </th>
+              <th className="px-6 py-4 text-sm font-medium text-gray-400">
+                Status
+              </th>
+              <th className="px-6 py-4 text-sm font-medium text-gray-400">
+                Priority
+              </th>
+              <th className="px-6 py-4 text-sm font-medium text-gray-400">
+                Tags
+              </th>
+              <th className="px-6 py-4 text-sm font-medium text-gray-400">
+                Sync
+              </th>
+              <th className="px-6 py-4 text-sm font-medium text-gray-400 text-right">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {tasks.map((task) => {
+              const priority = priorityConfig[task.priority] ?? priorityConfig.medium;
+              return (
+                <tr
+                  key={task.id}
+                  className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
+                >
+                  <td className="px-6 py-4">
+                    <div>
+                      <span className="text-sm font-medium text-white">
+                        {task.title}
                       </span>
-                    ))}
-                    {task.tags.length === 0 && (
+                      {task.description && (
+                        <p className="text-xs text-gray-500 truncate max-w-md mt-0.5">
+                          {task.description}
+                        </p>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <TaskStatusSelect
+                      taskId={task.id}
+                      currentStatus={task.status}
+                      onStatusChange={onStatusChange}
+                    />
+                  </td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 text-xs rounded-full border ${priority.bg} ${priority.text} ${priority.border}`}
+                    >
+                      {priority.label}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {task.tags.map((tag) => (
+                        <span
+                          key={tag.id}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border border-gray-700/50 text-gray-300"
+                        >
+                          <span
+                            className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ backgroundColor: tag.color }}
+                          />
+                          {tag.name}
+                        </span>
+                      ))}
+                      {task.tags.length === 0 && (
+                        <span className="text-xs text-gray-600">—</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {task.clickupTaskId ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-400">
+                        <CheckCircle2Icon className="w-3.5 h-3.5" />
+                        Synced
+                      </span>
+                    ) : (
                       <span className="text-xs text-gray-600">—</span>
                     )}
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  {task.clickupTaskId ? (
-                    <span className="inline-flex items-center gap-1 text-xs text-green-400">
-                      <CheckCircle2Icon className="w-3.5 h-3.5" />
-                      Synced
-                    </span>
-                  ) : (
-                    <span className="text-xs text-gray-600">—</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      onClick={() => onEdit(task)}
-                      className="p-2 text-gray-500 hover:text-blue-400 hover:bg-gray-800 rounded-lg transition-colors"
-                    >
-                      <PencilIcon className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => onDelete(task.id)}
-                      className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors"
-                    >
-                      <Trash2Icon className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => onEdit(task)}
+                        className="p-2 text-gray-500 hover:text-blue-400 hover:bg-gray-800 rounded-lg transition-colors"
+                      >
+                        <PencilIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => onDelete(task.id)}
+                        className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors"
+                      >
+                        <Trash2Icon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

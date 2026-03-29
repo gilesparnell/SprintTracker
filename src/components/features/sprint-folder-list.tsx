@@ -175,7 +175,7 @@ function FolderSection({
 
       {/* Sprint cards */}
       {!collapsed && (
-        <div className="px-4 pb-3 space-y-2 min-h-[40px]">
+        <div className="px-4 pb-2 space-y-1 min-h-[40px]">
           {sprints.length === 0 && (
             <div
               className={`flex items-center justify-center h-12 border-2 border-dashed rounded-lg transition-colors ${
@@ -423,7 +423,7 @@ export function SprintFolderList({
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
               Completed
             </h3>
-            <div className="space-y-3 opacity-60">
+            <div className="space-y-1 opacity-60">
               {completedSprints.map((sprint) => (
                 <SprintCard key={sprint.id} sprint={sprint} />
               ))}

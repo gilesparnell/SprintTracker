@@ -55,52 +55,37 @@ function SprintCardInner({ sprint }: { sprint: SprintWithCounts }) {
   const status = statusConfig[sprint.status] ?? statusConfig.planning;
 
   return (
-    <div className="group bg-gray-900/50 border border-gray-800 rounded-xl p-4 hover:border-gray-700 hover:bg-gray-900 transition-all cursor-pointer">
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3 mb-1">
-            <h3 className="text-sm font-bold text-white truncate group-hover:text-green-400 transition-colors">
-              {sprint.name}
-            </h3>
-            <span
-              className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full border ${status.bg} ${status.text} ${status.border}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-              {status.label}
-            </span>
-            {sprint.clickupListId && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border bg-green-900/20 text-green-400 border-green-500/30">
-                <LinkIcon className="w-3 h-3" />
-                ClickUp
-              </span>
-            )}
-          </div>
-          {sprint.goal && (
-            <p className="text-sm text-gray-400 truncate">{sprint.goal}</p>
-          )}
-        </div>
-        <ChevronRightIcon className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors shrink-0 mt-0.5" />
-      </div>
-
-      <div className="flex items-center gap-4 text-xs text-gray-500">
-        <span className="flex items-center gap-1.5">
-          <CalendarIcon className="w-3.5 h-3.5" />
+    <div className="group flex items-center gap-3 bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2.5 hover:border-gray-700 hover:bg-gray-900 transition-all cursor-pointer">
+      <h3 className="text-sm font-bold text-white truncate group-hover:text-green-400 transition-colors shrink-0 max-w-[200px]">
+        {sprint.name}
+      </h3>
+      <span
+        className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full border shrink-0 ${status.bg} ${status.text} ${status.border}`}
+      >
+        <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+        {status.label}
+      </span>
+      {sprint.goal && (
+        <p className="text-xs text-gray-500 truncate min-w-0">{sprint.goal}</p>
+      )}
+      <div className="flex items-center gap-3 ml-auto shrink-0 text-xs text-gray-500">
+        <span className="flex items-center gap-1">
+          <CalendarIcon className="w-3 h-3" />
           {sprint.startDate} — {sprint.endDate}
         </span>
-        <span className="flex items-center gap-1.5">
-          <CircleDotIcon className="w-3.5 h-3.5" />
-          {total} tasks
+        <span className="flex items-center gap-1">
+          <CircleDotIcon className="w-3 h-3" />
+          {total}
         </span>
         {sprint.taskCounts.done > 0 && (
-          <span className="flex items-center gap-1.5 text-green-400/70">
-            <CheckCircle2Icon className="w-3.5 h-3.5" />
-            {sprint.taskCounts.done} done
+          <span className="flex items-center gap-1 text-green-400/70">
+            <CheckCircle2Icon className="w-3 h-3" />
+            {sprint.taskCounts.done}
           </span>
         )}
-
         {total > 0 && (
-          <div className="flex items-center gap-2 ml-auto">
-            <div className="w-24 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+          <div className="flex items-center gap-1.5">
+            <div className="w-16 h-1.5 rounded-full bg-gray-800 overflow-hidden">
               <div
                 className="h-full rounded-full bg-green-500 transition-all"
                 style={{ width: `${progress}%` }}
@@ -111,6 +96,10 @@ function SprintCardInner({ sprint }: { sprint: SprintWithCounts }) {
             </span>
           </div>
         )}
+        {sprint.clickupListId && (
+          <LinkIcon className="w-3 h-3 text-green-400/60" />
+        )}
+        <ChevronRightIcon className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
       </div>
     </div>
   );

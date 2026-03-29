@@ -28,6 +28,7 @@ type Task = {
   priority: string;
   clickupTaskId: string | null;
   tags: Tag[];
+  customer: { id: string; name: string; color: string } | null;
 };
 
 const columns = [
@@ -114,13 +115,36 @@ function KanbanCard({
         <GripVerticalIcon className="w-3 h-3 text-gray-600" />
       </div>
 
-      {/* Priority + Sync badge row */}
-      <div className="flex items-center gap-1.5 mb-1.5">
+      {/* Title */}
+      <p className="text-sm font-medium text-white leading-snug line-clamp-2 pr-8">
+        {task.title}
+      </p>
+
+      {/* Metadata line: priority, tags, customer, sync */}
+      <div className="flex flex-wrap items-center gap-1 mt-1">
         <span
           className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded ${priority.bg} ${priority.text} ${priority.border} border`}
         >
           {priority.label}
         </span>
+        {task.tags.map((tag) => (
+          <span
+            key={tag.id}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border border-gray-700/50 text-gray-300"
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: tag.color }}
+            />
+            {tag.name}
+          </span>
+        ))}
+        {task.customer && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border border-purple-500/30 bg-purple-900/20 text-purple-300">
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: task.customer.color }} />
+            {task.customer.name}
+          </span>
+        )}
         {task.clickupTaskId && (
           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-green-900/20 text-green-400 border border-green-500/30">
             <LinkIcon className="w-2.5 h-2.5" />
@@ -128,36 +152,6 @@ function KanbanCard({
           </span>
         )}
       </div>
-
-      {/* Title */}
-      <p className="text-sm font-medium text-white leading-snug line-clamp-2 pr-4">
-        {task.title}
-      </p>
-
-      {/* Description preview */}
-      {task.description && (
-        <p className="text-xs text-gray-500 mt-1 line-clamp-1 leading-snug">
-          {task.description}
-        </p>
-      )}
-
-      {/* Tags */}
-      {task.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-1.5">
-          {task.tags.map((tag) => (
-            <span
-              key={tag.id}
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border border-gray-700/50 text-gray-300"
-            >
-              <span
-                className="w-1.5 h-1.5 rounded-full shrink-0"
-                style={{ backgroundColor: tag.color }}
-              />
-              {tag.name}
-            </span>
-          ))}
-        </div>
-      )}
 
       {/* Delete button */}
       <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -271,7 +265,7 @@ export function KanbanBoard({
 
   // Re-group when the tasks prop changes (filter, tag edits, status changes).
   const tasksKey = JSON.stringify(
-    tasks.map((t) => ({ i: t.id, s: t.status, t: t.tags.map((tt) => tt.id).sort() }))
+    tasks.map((t) => ({ i: t.id, s: t.status, t: t.tags.map((tt) => tt.id).sort(), c: t.customer?.id }))
   );
   useEffect(() => {
     setItems(groupTasks(tasks));

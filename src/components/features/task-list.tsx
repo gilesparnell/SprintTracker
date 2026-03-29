@@ -22,6 +22,7 @@ type Task = {
   priority: string;
   clickupTaskId: string | null;
   tags: Tag[];
+  customer: { id: string; name: string; color: string } | null;
 };
 
 const priorityConfig: Record<
@@ -125,6 +126,12 @@ function MobileTaskCard({
             {tag.name}
           </span>
         ))}
+        {task.customer && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border border-purple-500/30 bg-purple-900/20 text-purple-300">
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: task.customer.color }} />
+            {task.customer.name}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -187,6 +194,9 @@ export function TaskList({
                 Tags
               </th>
               <th className="px-6 py-4 text-sm font-medium text-gray-400">
+                Customer
+              </th>
+              <th className="px-6 py-4 text-sm font-medium text-gray-400">
                 Sync
               </th>
               <th className="px-6 py-4 text-sm font-medium text-gray-400 text-right">
@@ -246,6 +256,16 @@ export function TaskList({
                         <span className="text-xs text-gray-600">—</span>
                       )}
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {task.customer ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border border-purple-500/30 bg-purple-900/20 text-purple-300">
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: task.customer.color }} />
+                        {task.customer.name}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-600">—</span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     {task.clickupTaskId ? (

@@ -45,11 +45,21 @@ export const tasks = sqliteTable("tasks", {
   priority: text("priority", { enum: ["low", "medium", "high", "urgent"] })
     .notNull()
     .default("medium"),
+  customerId: text("customer_id").references(() => customers.id, { onDelete: "set null" }),
   clickupTaskId: text("clickup_task_id"),
   createdAt: text("created_at")
     .notNull()
     .$defaultFn(() => new Date().toISOString()),
   updatedAt: text("updated_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});
+
+export const customers = sqliteTable("customers", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  color: text("color").notNull().default("#6b7280"),
+  createdAt: text("created_at")
     .notNull()
     .$defaultFn(() => new Date().toISOString()),
 });

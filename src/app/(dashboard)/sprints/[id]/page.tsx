@@ -1,10 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { sprints, tasks, syncLog } from "@/lib/db/schema";
+import { sprints, tasks, syncLog, customers } from "@/lib/db/schema";
 import { eq, count, and, sql } from "drizzle-orm";
 import { deleteSprint, setSprintStatus } from "@/lib/actions/sprints";
 import { createTask, getTasksBySprintId } from "@/lib/actions/tasks";
 import { getAllTags, getTagsForTasks, setTaskTags } from "@/lib/actions/tags";
+import { getAllCustomers } from "@/lib/actions/customers";
 import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
 import { ClickUpClient } from "@/lib/clickup/client";
 import { syncTaskToClickUp } from "@/lib/clickup/sync";
@@ -67,10 +68,14 @@ export default async function SprintDetailPage({
   const sprintTasks = await getTasksBySprintId(db, id);
   const config = await getClickUpConfig();
   const allTags = await getAllTags(db);
+  const allCustomers = await getAllCustomers(db);
   const taskTagsMap = await getTagsForTasks(db, sprintTasks.map((t) => t.id));
+  const allCustomersList = await getAllCustomers(db);
+  const customerMap = Object.fromEntries(allCustomersList.map(c => [c.id, c]));
   const tasksWithTags = sprintTasks.map((t) => ({
     ...t,
     tags: taskTagsMap[t.id] ?? [],
+    customer: t.customerId ? customerMap[t.customerId] ?? null : null,
   }));
 
   const taskCounts = await db
@@ -138,6 +143,7 @@ export default async function SprintDetailPage({
       description: (formData.get("description") as string) || undefined,
       status: (formData.get("status") as "open" | "in_progress" | "done") || "open",
       priority: (formData.get("priority") as "low" | "medium" | "high" | "urgent") || "medium",
+      customerId: ((formData.get("customerId") as string) === "__none__" ? undefined : (formData.get("customerId") as string)) || undefined,
     });
 
     if (!result.success) {
@@ -340,10 +346,11 @@ export default async function SprintDetailPage({
               }
               title="New Task"
               allTags={allTags}
+              allCustomers={allCustomers}
             />
           </div>
         </div>
-        <TaskListWrapper sprintId={id} initialTasks={tasksWithTags} allTags={allTags} />
+        <TaskListWrapper sprintId={id} initialTasks={tasksWithTags} allTags={allTags} allCustomers={allCustomers} />
       </div>
     </div>
   );

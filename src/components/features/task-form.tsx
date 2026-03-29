@@ -23,6 +23,12 @@ type Tag = {
   color: string;
 };
 
+type Customer = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type FormState = {
   success: boolean;
   errors?: Record<string, string[]>;
@@ -188,6 +194,7 @@ export function TaskFormDialog({
   title,
   defaultValues,
   allTags = [],
+  allCustomers = [],
   open: controlledOpen,
   onOpenChange,
 }: {
@@ -200,8 +207,10 @@ export function TaskFormDialog({
     status?: string;
     priority?: string;
     tagIds?: string[];
+    customerId?: string;
   };
   allTags?: Tag[];
+  allCustomers?: Customer[];
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
@@ -319,6 +328,21 @@ export function TaskFormDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-300">Customer</label>
+            <Select name="customerId" defaultValue={defaultValues?.customerId ?? "__none__"}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">No customer</SelectItem>
+                {allCustomers.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <TagPicker

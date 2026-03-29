@@ -5,6 +5,7 @@ export const taskSchema = z.object({
   description: z.string().optional(),
   status: z.enum(["open", "in_progress", "done"]).default("open"),
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+  customerId: z.string().optional(),
 });
 
 export type TaskInput = z.infer<typeof taskSchema>;

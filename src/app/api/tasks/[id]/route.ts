@@ -16,7 +16,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const body = await request.json();
-  const result = await updateTask(db, id, body);
+  const { title, description, status, priority, customerId } = await request.json();
+  const result = await updateTask(db, id, { title, description, status, priority, customerId });
   return NextResponse.json(result);
 }

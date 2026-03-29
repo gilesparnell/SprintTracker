@@ -43,6 +43,7 @@ export async function createTask(
       description: parsed.data.description ?? null,
       status: parsed.data.status,
       priority: parsed.data.priority,
+      customerId: parsed.data.customerId ?? null,
       createdAt: now,
       updatedAt: now,
     });
@@ -79,14 +80,23 @@ export async function updateTask(
     return { success: false, errors: fieldErrors };
   }
 
-  await db.update(tasks)
-    .set({
+  const updateValues: Record<string, unknown> = {
       title: parsed.data.title,
       description: parsed.data.description ?? null,
       status: parsed.data.status,
       priority: parsed.data.priority,
       updatedAt: new Date().toISOString(),
-    })
+    };
+
+  if (input.customerId !== undefined) {
+    updateValues.customerId =
+      input.customerId === "" || input.customerId === "__none__"
+        ? null
+        : input.customerId;
+  }
+
+  await db.update(tasks)
+    .set(updateValues)
     .where(eq(tasks.id, id));
 
   const task = await db.select().from(tasks).where(eq(tasks.id, id)).get();

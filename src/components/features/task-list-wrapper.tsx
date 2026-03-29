@@ -13,6 +13,8 @@ type Tag = {
   color: string;
 };
 
+type Customer = { id: string; name: string; color: string };
+
 type Task = {
   id: string;
   title: string;
@@ -21,16 +23,19 @@ type Task = {
   priority: string;
   clickupTaskId: string | null;
   tags: Tag[];
+  customer: { id: string; name: string; color: string } | null;
 };
 
 export function TaskListWrapper({
   sprintId,
   initialTasks,
   allTags,
+  allCustomers,
 }: {
   sprintId: string;
   initialTasks: Task[];
   allTags: Tag[];
+  allCustomers: Customer[];
 }) {
   const router = useRouter();
   const [view, setView] = useState<"kanban" | "list">("kanban");
@@ -82,6 +87,7 @@ export function TaskListWrapper({
         description: (formData.get("description") as string) || undefined,
         status: formData.get("status") as string,
         priority: formData.get("priority") as string,
+        customerId: formData.get("customerId") as string,
       }),
     });
 
@@ -197,8 +203,10 @@ export function TaskListWrapper({
             status: editingTask.status,
             priority: editingTask.priority,
             tagIds: editingTask.tags.map((t) => t.id),
+            customerId: editingTask.customer?.id,
           }}
           allTags={allTags}
+          allCustomers={allCustomers}
           open={!!editingTask}
           onOpenChange={(open) => {
             if (!open) setEditingTask(null);

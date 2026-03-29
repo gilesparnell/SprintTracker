@@ -93,8 +93,17 @@ function KanbanCard({
         isDragSource ? "opacity-40 scale-95" : ""
       }`}
     >
-      {/* Drag handle */}
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Top-right actions: edit + drag handle */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(task);
+          }}
+          className="p-1 text-gray-600 hover:text-blue-400 hover:bg-blue-900/20 rounded-md transition-colors"
+        >
+          <PencilIcon className="w-3 h-3" />
+        </button>
         <GripVerticalIcon className="w-3 h-3 text-gray-600" />
       </div>
 
@@ -125,17 +134,8 @@ function KanbanCard({
         </p>
       )}
 
-      {/* Action buttons */}
-      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(task);
-          }}
-          className="p-1 text-gray-600 hover:text-blue-400 hover:bg-blue-900/20 rounded-md transition-colors"
-        >
-          <PencilIcon className="w-3 h-3" />
-        </button>
+      {/* Delete button */}
+      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={(e) => {
             e.stopPropagation();

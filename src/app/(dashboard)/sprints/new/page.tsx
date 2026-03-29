@@ -3,16 +3,21 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { createSprint } from "@/lib/actions/sprints";
+import { getAllFolders } from "@/lib/actions/folders";
 import { SprintForm } from "@/components/features/sprint-form";
 import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
-export default function NewSprintPage() {
+export default async function NewSprintPage() {
+  const folders = await getAllFolders(db);
+
   async function handleCreate(
     _prevState: { success: boolean; errors?: Record<string, string[]> },
     formData: FormData
   ) {
     "use server";
+
+    const folderId = formData.get("folderId") as string;
 
     const result = await createSprint(db, {
       name: formData.get("name") as string,
@@ -20,7 +25,8 @@ export default function NewSprintPage() {
       startDate: formData.get("startDate") as string,
       endDate: formData.get("endDate") as string,
       status: (formData.get("status") as "planning" | "active" | "completed") || "planning",
-    });
+      folderId: folderId && folderId !== "__none__" ? folderId : undefined,
+    } as Record<string, unknown>);
 
     if (!result.success) {
       return { success: false, errors: result.errors };
@@ -42,7 +48,10 @@ export default function NewSprintPage() {
       <p className="text-gray-400 text-sm mb-8">
         Define your sprint goals, timeline, and get started.
       </p>
-      <SprintForm action={handleCreate} />
+      <SprintForm
+        action={handleCreate}
+        folders={folders.map((f) => ({ id: f.id, name: f.name }))}
+      />
     </div>
   );
 }

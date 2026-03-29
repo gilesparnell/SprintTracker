@@ -1,5 +1,17 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 
+export const folders = sqliteTable("folders", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});
+
 export const sprints = sqliteTable("sprints", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -9,6 +21,7 @@ export const sprints = sqliteTable("sprints", {
   status: text("status", { enum: ["planning", "active", "completed"] })
     .notNull()
     .default("planning"),
+  folderId: text("folder_id").references(() => folders.id, { onDelete: "set null" }),
   clickupListId: text("clickup_list_id"),
   clickupFolderId: text("clickup_folder_id"),
   createdAt: text("created_at")

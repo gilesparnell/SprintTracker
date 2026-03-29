@@ -14,6 +14,7 @@ type SprintWithCounts = {
   startDate: string;
   endDate: string;
   status: string;
+  folderId?: string | null;
   clickupListId: string | null;
   taskCounts: { open: number; in_progress: number; done: number };
 };

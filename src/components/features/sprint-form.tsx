@@ -17,6 +17,7 @@ type FormState = {
 export function SprintForm({
   action,
   defaultValues,
+  folders,
 }: {
   action: (
     prevState: FormState,
@@ -28,7 +29,9 @@ export function SprintForm({
     startDate?: string;
     endDate?: string;
     status?: string;
+    folderId?: string;
   };
+  folders?: { id: string; name: string }[];
 }) {
   const [state, formAction, pending] = useActionState(action, {
     success: false,
@@ -99,20 +102,42 @@ export function SprintForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="status" className="block text-sm font-medium text-gray-300">
-          Status
-        </label>
-        <Select name="status" defaultValue={defaultValues?.status ?? "planning"}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="planning">Planning</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label htmlFor="status" className="block text-sm font-medium text-gray-300">
+            Status
+          </label>
+          <Select name="status" defaultValue={defaultValues?.status ?? "planning"}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="planning">Planning</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {folders && folders.length > 0 && (
+          <div className="space-y-2">
+            <label htmlFor="folderId" className="block text-sm font-medium text-gray-300">
+              Folder
+            </label>
+            <Select name="folderId" defaultValue={defaultValues?.folderId ?? "__none__"}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">No folder</SelectItem>
+                {folders.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <button

@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import {
+  FolderIcon,
   LayoutDashboardIcon,
   SettingsIcon,
   ZapIcon,
@@ -9,16 +10,22 @@ import {
 import { BackgroundSlideshow } from "@/components/features/background-slideshow";
 import { LoveNotes } from "@/components/features/love-notes";
 import { db } from "@/lib/db";
-import { sprints } from "@/lib/db/schema";
-import { desc } from "drizzle-orm";
+import { sprints, folders } from "@/lib/db/schema";
+import { asc, desc } from "drizzle-orm";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const allFolders = await db
+    .select({ id: folders.id, name: folders.name })
+    .from(folders)
+    .orderBy(asc(folders.sortOrder), asc(folders.createdAt))
+    .all();
+
   const allSprints = await db
-    .select({ id: sprints.id, name: sprints.name, status: sprints.status })
+    .select({ id: sprints.id, name: sprints.name, status: sprints.status, folderId: sprints.folderId })
     .from(sprints)
     .orderBy(desc(sprints.createdAt))
     .all();
@@ -53,9 +60,32 @@ export default async function DashboardLayout({
             Sprints
             <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-400" />
           </Link>
-          {activeSprints.length > 0 && (
+          {(activeSprints.length > 0 || allFolders.length > 0) && (
             <div className="ml-4 pl-3 border-l border-gray-800 space-y-0.5 py-1">
-              {activeSprints.map((s) => (
+              {allFolders.map((folder) => {
+                const folderSprints = activeSprints.filter((s) => s.folderId === folder.id);
+                return (
+                  <details key={folder.id} open>
+                    <summary className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs text-gray-500 hover:text-gray-300 cursor-pointer select-none">
+                      <FolderIcon className="w-3 h-3 text-amber-400/60" />
+                      <span className="truncate">{folder.name}</span>
+                      <span className="ml-auto text-[10px] text-gray-700">{folderSprints.length}</span>
+                    </summary>
+                    <div className="ml-3 space-y-0.5">
+                      {folderSprints.map((s) => (
+                        <Link
+                          key={s.id}
+                          href={`/sprints/${s.id}`}
+                          className="block px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:text-gray-200 hover:bg-gray-800/50 transition-colors truncate"
+                        >
+                          {s.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </details>
+                );
+              })}
+              {activeSprints.filter((s) => !s.folderId).map((s) => (
                 <Link
                   key={s.id}
                   href={`/sprints/${s.id}`}

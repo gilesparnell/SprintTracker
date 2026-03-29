@@ -2,12 +2,18 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { sprints, tasks } from "@/lib/db/schema";
+import { sprints, tasks, folders } from "@/lib/db/schema";
 import { asc, eq, count } from "drizzle-orm";
-import { SprintCard } from "@/components/features/sprint-card";
+import { SprintFolderList } from "@/components/features/sprint-folder-list";
 import { PlusIcon, ZapIcon } from "lucide-react";
 
 export default async function SprintsPage() {
+  const allFolders = await db
+    .select()
+    .from(folders)
+    .orderBy(asc(folders.sortOrder), asc(folders.createdAt))
+    .all();
+
   const allSprints = await db.select().from(sprints).orderBy(asc(sprints.startDate)).all();
 
   const sprintsWithCounts = await Promise.all(
@@ -45,7 +51,7 @@ export default async function SprintsPage() {
         </Link>
       </div>
 
-      {sprintsWithCounts.length === 0 ? (
+      {sprintsWithCounts.length === 0 && allFolders.length === 0 ? (
         <div className="border border-gray-800 border-dashed rounded-2xl p-16 text-center">
           <div className="w-14 h-14 bg-green-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
             <ZapIcon className="w-6 h-6 text-green-400" />
@@ -62,29 +68,10 @@ export default async function SprintsPage() {
           </Link>
         </div>
       ) : (
-        <>
-          <div className="space-y-3">
-            {sprintsWithCounts
-              .filter((s) => s.status !== "completed")
-              .map((sprint) => (
-                <SprintCard key={sprint.id} sprint={sprint} />
-              ))}
-          </div>
-          {sprintsWithCounts.some((s) => s.status === "completed") && (
-            <div className="mt-8">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                Completed
-              </h3>
-              <div className="space-y-3 opacity-60">
-                {sprintsWithCounts
-                  .filter((s) => s.status === "completed")
-                  .map((sprint) => (
-                    <SprintCard key={sprint.id} sprint={sprint} />
-                  ))}
-              </div>
-            </div>
-          )}
-        </>
+        <SprintFolderList
+          initialFolders={allFolders.map((f) => ({ id: f.id, name: f.name }))}
+          initialSprints={sprintsWithCounts}
+        />
       )}
     </div>
   );

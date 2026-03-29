@@ -38,6 +38,7 @@ export async function createSprint(db: DB, input: Partial<SprintInput>): Promise
       startDate: parsed.data.startDate,
       endDate: parsed.data.endDate,
       status: parsed.data.status,
+      folderId: (input as Record<string, unknown>).folderId as string | undefined ?? null,
       createdAt: now,
       updatedAt: now,
     });
@@ -94,5 +95,12 @@ export async function setSprintStatus(db: DB, id: string, status: "planning" | "
 
 export async function deleteSprint(db: DB, id: string): Promise<{ success: boolean }> {
   await db.delete(sprints).where(eq(sprints.id, id));
+  return { success: true };
+}
+
+export async function moveSprintToFolder(db: DB, sprintId: string, folderId: string | null): Promise<{ success: boolean }> {
+  await db.update(sprints)
+    .set({ folderId, updatedAt: new Date().toISOString() })
+    .where(eq(sprints.id, sprintId));
   return { success: true };
 }

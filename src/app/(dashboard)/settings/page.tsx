@@ -1,11 +1,15 @@
 export const dynamic = "force-dynamic";
 
 import { ClickUpHierarchyBrowser } from "@/components/features/clickup-hierarchy-browser";
+import { TagManager } from "@/components/features/tag-manager";
 import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
+import { getAllTags } from "@/lib/actions/tags";
+import { db } from "@/lib/db";
 
 export default async function SettingsPage() {
   const config = await getClickUpConfig();
   const hasToken = !!(await getClickUpToken());
+  const allTags = await getAllTags(db);
 
   return (
     <div className="max-w-5xl">
@@ -15,6 +19,11 @@ export default async function SettingsPage() {
       </p>
 
       <div className="space-y-6">
+        <div className="bg-gray-900/30 border border-gray-800 rounded-2xl p-6">
+          <h3 className="text-lg font-bold text-white mb-4">Tags</h3>
+          <TagManager initialTags={allTags} />
+        </div>
+
         <div className="bg-gray-900/30 border border-gray-800 rounded-2xl p-6">
           <h3 className="text-lg font-bold text-white mb-2">How ClickUp sync works</h3>
           <div className="space-y-3 text-sm text-gray-400">

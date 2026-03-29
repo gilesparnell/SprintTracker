@@ -1,7 +1,7 @@
 "use server";
 
 import { eq, and, inArray } from "drizzle-orm";
-import { tags, taskTags } from "@/lib/db/schema";
+import { tags, taskTags, tasks } from "@/lib/db/schema";
 import { v4 as uuid } from "uuid";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 
@@ -21,6 +21,26 @@ export async function createTag(db: DB, name: string, color?: string) {
     createdAt: new Date().toISOString(),
   });
   return db.select().from(tags).where(eq(tags.id, id)).get();
+}
+
+export async function renameTag(db: DB, id: string, name: string) {
+  await db.update(tags).set({ name: name.trim() }).where(eq(tags.id, id));
+  return db.select().from(tags).where(eq(tags.id, id)).get();
+}
+
+export async function getTasksForTag(db: DB, tagId: string) {
+  const rows = await db
+    .select({
+      id: tasks.id,
+      title: tasks.title,
+      status: tasks.status,
+      sprintId: tasks.sprintId,
+    })
+    .from(taskTags)
+    .innerJoin(tasks, eq(taskTags.taskId, tasks.id))
+    .where(eq(taskTags.tagId, tagId))
+    .all();
+  return rows;
 }
 
 export async function deleteTag(db: DB, id: string) {

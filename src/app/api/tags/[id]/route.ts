@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { deleteTag } from "@/lib/actions/tags";
+import { deleteTag, renameTag } from "@/lib/actions/tags";
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const { name } = await request.json();
+  if (!name?.trim()) {
+    return NextResponse.json({ error: "Name required" }, { status: 400 });
+  }
+  const tag = await renameTag(db, id, name);
+  return NextResponse.json(tag);
+}
 
 export async function DELETE(
   _request: Request,

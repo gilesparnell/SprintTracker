@@ -269,9 +269,10 @@ export function KanbanBoard({
 
   const [items, setItems] = useState<Record<string, Task[]>>(() => groupTasks(tasks));
 
-  // Re-group when the tasks prop changes (e.g. tag filter applied).
-  // Use a stable key based on task IDs so drag-reorder doesn't trigger this.
-  const tasksKey = tasks.map((t) => t.id).sort().join(",");
+  // Re-group when the tasks prop changes (filter, tag edits, status changes).
+  const tasksKey = JSON.stringify(
+    tasks.map((t) => ({ i: t.id, s: t.status, t: t.tags.map((tt) => tt.id).sort() }))
+  );
   useEffect(() => {
     setItems(groupTasks(tasks));
     // eslint-disable-next-line react-hooks/exhaustive-deps

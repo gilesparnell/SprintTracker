@@ -1,15 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { sprints, tasks, syncLog, customers } from "@/lib/db/schema";
+import { sprints, tasks, syncLog } from "@/lib/db/schema";
 import { eq, count, and, sql } from "drizzle-orm";
 import { deleteSprint, setSprintStatus } from "@/lib/actions/sprints";
-import { createTask, getTasksBySprintId } from "@/lib/actions/tasks";
-import { getAllTags, getTagsForTasks, setTaskTags } from "@/lib/actions/tags";
+import { getTasksBySprintId } from "@/lib/actions/tasks";
+import { getAllTags, getTagsForTasks } from "@/lib/actions/tags";
 import { getAllCustomers } from "@/lib/actions/customers";
-import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
-import { ClickUpClient } from "@/lib/clickup/client";
-import { syncTaskToClickUp } from "@/lib/clickup/sync";
-import { TaskFormDialog } from "@/components/features/task-form";
+import { getClickUpConfig } from "@/lib/actions/clickup-config";
 import { TaskListWrapper } from "@/components/features/task-list-wrapper";
 import { SprintClickUpLinkWrapper } from "@/components/features/sprint-clickup-link-wrapper";
 import { DeleteSprintButton } from "@/components/features/delete-sprint-button";
@@ -22,7 +19,6 @@ import {
   ClockIcon,
   LinkIcon,
   ListTodoIcon,
-  PlusIcon,
   ScrollTextIcon,
 } from "lucide-react";
 
@@ -129,51 +125,6 @@ export default async function SprintDetailPage({
   async function handleSetCompleted() {
     "use server";
     await setSprintStatus(db, id, "completed");
-    redirect(`/sprints/${id}`);
-  }
-
-  async function handleCreateTask(
-    _prevState: { success: boolean; errors?: Record<string, string[]> },
-    formData: FormData
-  ) {
-    "use server";
-
-    const result = await createTask(db, id, {
-      title: formData.get("title") as string,
-      description: (formData.get("description") as string) || undefined,
-      status: (formData.get("status") as "open" | "in_progress" | "done") || "open",
-      priority: (formData.get("priority") as "low" | "medium" | "high" | "urgent") || "medium",
-      customerId: ((formData.get("customerId") as string) === "__none__" ? undefined : (formData.get("customerId") as string)) || undefined,
-    });
-
-    if (!result.success) {
-      return { success: false, errors: result.errors };
-    }
-
-    // Save tags
-    const tagIdsRaw = formData.get("tagIds") as string;
-    const tagIds = tagIdsRaw ? tagIdsRaw.split(",").filter(Boolean) : [];
-    if (tagIds.length > 0) {
-      await setTaskTags(db, result.task!.id, tagIds);
-    }
-
-    const currentSprint = await db
-      .select()
-      .from(sprints)
-      .where(eq(sprints.id, id))
-      .get();
-
-    const token = await getClickUpToken();
-    if (currentSprint?.clickupListId && token) {
-      const client = new ClickUpClient(token);
-      await syncTaskToClickUp(
-        db,
-        client,
-        result.task!.id,
-        currentSprint.clickupListId
-      );
-    }
-
     redirect(`/sprints/${id}`);
   }
 
@@ -322,33 +273,19 @@ export default async function SprintDetailPage({
       <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tasks</h3>
-          <div className="flex gap-2">
-            {sprint.clickupListId && (
-              <Link href={`/sprints/${id}/sync-log`}>
-                <button className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-400 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 hover:text-gray-200 transition-colors">
-                  <ScrollTextIcon className="w-3 h-3" />
-                  Sync Log
-                  {syncErrorCount > 0 && (
-                    <span className="ml-1 w-3.5 h-3.5 rounded-full bg-red-900/50 text-red-400 text-[9px] font-bold flex items-center justify-center">
-                      {syncErrorCount}
-                    </span>
-                  )}
-                </button>
-              </Link>
-            )}
-            <TaskFormDialog
-              action={handleCreateTask}
-              trigger={
-                <button className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-green-600 hover:bg-green-500 rounded-lg transition-colors">
-                  <PlusIcon className="w-3 h-3" />
-                  Add Task
-                </button>
-              }
-              title="New Task"
-              allTags={allTags}
-              allCustomers={allCustomers}
-            />
-          </div>
+          {sprint.clickupListId && (
+            <Link href={`/sprints/${id}/sync-log`}>
+              <button className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-400 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 hover:text-gray-200 transition-colors">
+                <ScrollTextIcon className="w-3 h-3" />
+                Sync Log
+                {syncErrorCount > 0 && (
+                  <span className="ml-1 w-3.5 h-3.5 rounded-full bg-red-900/50 text-red-400 text-[9px] font-bold flex items-center justify-center">
+                    {syncErrorCount}
+                  </span>
+                )}
+              </button>
+            </Link>
+          )}
         </div>
         <TaskListWrapper sprintId={id} initialTasks={tasksWithTags} allTags={allTags} allCustomers={allCustomers} />
       </div>

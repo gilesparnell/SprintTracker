@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { TaskList } from "./task-list";
 import { KanbanBoard } from "./kanban-board";
 import { TaskFormDialog } from "./task-form";
-import { KanbanIcon, ListIcon, TagIcon, UsersIcon, XIcon } from "lucide-react";
+import { KanbanIcon, ListIcon, PlusIcon, TagIcon, UsersIcon, XIcon } from "lucide-react";
 
 type Tag = {
   id: string;
@@ -127,6 +127,35 @@ export function TaskListWrapper({
     return { success: true };
   }
 
+  async function handleCreateTask(
+    _prevState: { success: boolean; errors?: Record<string, string[]> },
+    formData: FormData
+  ): Promise<{ success: boolean; errors?: Record<string, string[]> }> {
+    const tagIdsRaw = formData.get("tagIds") as string;
+    const tagIds = tagIdsRaw ? tagIdsRaw.split(",").filter(Boolean) : [];
+
+    const res = await fetch(`/api/sprints/${sprintId}/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: formData.get("title") as string,
+        description: (formData.get("description") as string) || undefined,
+        status: formData.get("status") as string,
+        priority: formData.get("priority") as string,
+        customerId: formData.get("customerId") as string,
+        tagIds,
+      }),
+    });
+
+    const result = await res.json();
+    if (!result.success) {
+      return { success: false, errors: result.errors };
+    }
+
+    router.refresh();
+    return { success: true };
+  }
+
   return (
     <div>
       {/* Filters + view toggle */}
@@ -160,29 +189,43 @@ export function TaskListWrapper({
             </div>
           )}
 
-          <div className="flex items-center bg-gray-900 border border-gray-800 rounded-lg p-0.5 ml-auto shrink-0">
-            <button
-              onClick={() => setView("kanban")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                view === "kanban"
-                  ? "bg-gray-800 text-white"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              <KanbanIcon className="w-3.5 h-3.5" />
-              Board
-            </button>
-            <button
-              onClick={() => setView("list")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                view === "list"
-                  ? "bg-gray-800 text-white"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              <ListIcon className="w-3.5 h-3.5" />
-              List
-            </button>
+          <div className="flex items-center gap-2 ml-auto shrink-0">
+            <TaskFormDialog
+              action={handleCreateTask}
+              trigger={
+                <button className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-500 rounded-lg transition-colors">
+                  <PlusIcon className="w-3 h-3" />
+                  Add Task
+                </button>
+              }
+              title="New Task"
+              allTags={allTags}
+              allCustomers={allCustomers}
+            />
+            <div className="flex items-center bg-gray-900 border border-gray-800 rounded-lg p-0.5">
+              <button
+                onClick={() => setView("kanban")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  view === "kanban"
+                    ? "bg-gray-800 text-white"
+                    : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                <KanbanIcon className="w-3.5 h-3.5" />
+                Board
+              </button>
+              <button
+                onClick={() => setView("list")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  view === "list"
+                    ? "bg-gray-800 text-white"
+                    : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                <ListIcon className="w-3.5 h-3.5" />
+                List
+              </button>
+            </div>
           </div>
         </div>
 

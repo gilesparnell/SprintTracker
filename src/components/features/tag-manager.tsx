@@ -104,10 +104,25 @@ export function TagManager({ initialTags }: { initialTags: Tag[] }) {
     router.refresh();
   }
 
-  const statusLabels: Record<string, string> = {
-    open: "Open",
-    in_progress: "In Progress",
-    done: "Done",
+  async function removeTagFromTask(taskId: string) {
+    if (!deletingTag) return;
+    // Fetch current tags for this task, remove the one being deleted, save back
+    const res = await fetch(`/api/tasks/${taskId}/tags`);
+    const currentTags: Tag[] = await res.json();
+    const remaining = currentTags.filter((t) => t.id !== deletingTag.id).map((t) => t.id);
+    await fetch(`/api/tasks/${taskId}/tags`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tagIds: remaining }),
+    });
+    setAffectedTasks((prev) => prev.filter((t) => t.id !== taskId));
+    router.refresh();
+  }
+
+  const statusConfig: Record<string, { label: string; color: string }> = {
+    open: { label: "Open", color: "text-amber-400" },
+    in_progress: { label: "In Progress", color: "text-blue-400" },
+    done: { label: "Done", color: "text-green-400" },
   };
 
   return (
@@ -248,18 +263,27 @@ export function TagManager({ initialTags }: { initialTags: Tag[] }) {
               <p className="text-xs text-gray-400 mb-1.5">
                 {affectedTasks.length} task{affectedTasks.length !== 1 ? "s" : ""} will lose this tag:
               </p>
-              <div className="space-y-1 max-h-40 overflow-y-auto">
-                {affectedTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center gap-2 text-xs py-1 px-2 rounded bg-gray-900/50 border border-gray-800"
-                  >
-                    <span className="text-white truncate flex-1">{task.title}</span>
-                    <span className="text-gray-500 shrink-0">
-                      {statusLabels[task.status] ?? task.status}
-                    </span>
-                  </div>
-                ))}
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {affectedTasks.map((task) => {
+                  const status = statusConfig[task.status] ?? { label: task.status, color: "text-gray-400" };
+                  return (
+                    <div
+                      key={task.id}
+                      className="flex items-center gap-2 text-xs py-1.5 px-2 rounded bg-gray-900/50 border border-gray-800"
+                    >
+                      <span className="text-white truncate flex-1">{task.title}</span>
+                      <span className={`shrink-0 ${status.color}`}>
+                        {status.label}
+                      </span>
+                      <button
+                        onClick={() => removeTagFromTask(task.id)}
+                        className="shrink-0 px-2 py-0.5 text-[10px] font-medium text-red-400 hover:text-white border border-red-500/30 hover:bg-red-600 rounded transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (

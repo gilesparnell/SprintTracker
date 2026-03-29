@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useActionState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Select,
   SelectContent,
@@ -245,9 +245,22 @@ export function TaskFormDialog({
     }
   }
 
-  const [state, formAction, pending] = useActionState(action, {
-    success: false,
-  });
+  const [state, setState] = useState<FormState>({ success: false });
+  const [pending, setPending] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPending(true);
+    try {
+      const result = await action(state, new FormData(e.currentTarget));
+      setState(result);
+      if (result.success) {
+        handleOpenChange(false);
+      }
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
@@ -257,10 +270,7 @@ export function TaskFormDialog({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            formAction(new FormData(e.currentTarget));
-          }}
+          onSubmit={handleSubmit}
           className="space-y-4"
         >
           <input type="hidden" name="tagIds" value={selectedTagIds.join(",")} />

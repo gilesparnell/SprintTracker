@@ -10,6 +10,7 @@ import {
   ClockIcon,
   GripVerticalIcon,
   LinkIcon,
+  PencilIcon,
   Trash2Icon,
 } from "lucide-react";
 
@@ -67,11 +68,13 @@ function KanbanCard({
   columnId,
   index,
   onDelete,
+  onEdit,
 }: {
   task: Task;
   columnId: string;
   index: number;
   onDelete: (taskId: string) => void;
+  onEdit: (task: Task) => void;
 }) {
   const { ref, isDragSource } = useSortable({
     id: task.id,
@@ -122,8 +125,17 @@ function KanbanCard({
         </p>
       )}
 
-      {/* Delete button */}
-      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Action buttons */}
+      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(task);
+          }}
+          className="p-1 text-gray-600 hover:text-blue-400 hover:bg-blue-900/20 rounded-md transition-colors"
+        >
+          <PencilIcon className="w-3 h-3" />
+        </button>
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -142,10 +154,12 @@ function KanbanColumn({
   column,
   tasks,
   onDelete,
+  onEdit,
 }: {
   column: (typeof columns)[number];
   tasks: Task[];
   onDelete: (taskId: string) => void;
+  onEdit: (task: Task) => void;
 }) {
   const { ref, isDropTarget } = useDroppable({
     id: column.id,
@@ -186,6 +200,7 @@ function KanbanColumn({
             columnId={column.id}
             index={index}
             onDelete={onDelete}
+            onEdit={onEdit}
           />
         ))}
 
@@ -206,10 +221,12 @@ export function KanbanBoard({
   tasks,
   onStatusChange,
   onDelete,
+  onEdit,
 }: {
   tasks: Task[];
   onStatusChange: (taskId: string, status: string) => void;
   onDelete: (taskId: string) => void;
+  onEdit: (task: Task) => void;
 }) {
   // Group tasks by status into a record of arrays
   const [items, setItems] = useState<Record<string, Task[]>>(() => {
@@ -258,6 +275,7 @@ export function KanbanBoard({
             column={column}
             tasks={items[column.id] ?? []}
             onDelete={onDelete}
+            onEdit={onEdit}
           />
         ))}
       </div>

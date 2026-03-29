@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TaskList } from "./task-list";
 import { KanbanBoard } from "./kanban-board";
+import { TaskFormDialog } from "./task-form";
 import { KanbanIcon, ListIcon } from "lucide-react";
 
 type Task = {
@@ -24,6 +25,7 @@ export function TaskListWrapper({
 }) {
   const router = useRouter();
   const [view, setView] = useState<"kanban" | "list">("kanban");
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   async function handleStatusChange(taskId: string, status: string) {
     await fetch(`/api/tasks/${taskId}/status`, {
@@ -39,6 +41,33 @@ export function TaskListWrapper({
       method: "DELETE",
     });
     router.refresh();
+  }
+
+  async function handleEditTask(
+    _prevState: { success: boolean; errors?: Record<string, string[]> },
+    formData: FormData
+  ): Promise<{ success: boolean; errors?: Record<string, string[]> }> {
+    if (!editingTask) return { success: false };
+
+    const res = await fetch(`/api/tasks/${editingTask.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: formData.get("title") as string,
+        description: (formData.get("description") as string) || undefined,
+        status: formData.get("status") as string,
+        priority: formData.get("priority") as string,
+      }),
+    });
+
+    const result = await res.json();
+    if (!result.success) {
+      return { success: false, errors: result.errors };
+    }
+
+    setEditingTask(null);
+    router.refresh();
+    return { success: true };
   }
 
   return (
@@ -76,12 +105,31 @@ export function TaskListWrapper({
           tasks={initialTasks}
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}
+          onEdit={setEditingTask}
         />
       ) : (
         <TaskList
           tasks={initialTasks}
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}
+          onEdit={setEditingTask}
+        />
+      )}
+
+      {editingTask && (
+        <TaskFormDialog
+          action={handleEditTask}
+          title="Edit Task"
+          defaultValues={{
+            title: editingTask.title,
+            description: editingTask.description ?? undefined,
+            status: editingTask.status,
+            priority: editingTask.priority,
+          }}
+          open={!!editingTask}
+          onOpenChange={(open) => {
+            if (!open) setEditingTask(null);
+          }}
         />
       )}
     </div>

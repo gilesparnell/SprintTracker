@@ -4,6 +4,7 @@ import { TaskStatusSelect } from "./task-status-select";
 import {
   CheckCircle2Icon,
   ListTodoIcon,
+  PencilIcon,
   Trash2Icon,
 } from "lucide-react";
 
@@ -50,10 +51,12 @@ export function TaskList({
   tasks,
   onStatusChange,
   onDelete,
+  onEdit,
 }: {
   tasks: Task[];
   onStatusChange: (taskId: string, status: string) => void;
   onDelete: (taskId: string) => void;
+  onEdit: (task: Task) => void;
 }) {
   if (tasks.length === 0) {
     return (
@@ -135,12 +138,20 @@ export function TaskList({
                   )}
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button
-                    onClick={() => onDelete(task.id)}
-                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors"
-                  >
-                    <Trash2Icon className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => onEdit(task)}
+                      className="p-2 text-gray-500 hover:text-blue-400 hover:bg-gray-800 rounded-lg transition-colors"
+                    >
+                      <PencilIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onDelete(task.id)}
+                      className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors"
+                    >
+                      <Trash2Icon className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             );

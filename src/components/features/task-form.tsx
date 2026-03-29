@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useActionState } from "react";
 import {
   Select,
   SelectContent,
@@ -26,9 +26,11 @@ export function TaskFormDialog({
   trigger,
   title,
   defaultValues,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   action: (prevState: FormState, formData: FormData) => Promise<FormState>;
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
   title: string;
   defaultValues?: {
     title?: string;
@@ -36,14 +38,21 @@ export function TaskFormDialog({
     status?: string;
     priority?: string;
   };
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const dialogOpen = isControlled ? controlledOpen : uncontrolledOpen;
+  const setDialogOpen = isControlled ? (onOpenChange ?? (() => {})) : setUncontrolledOpen;
+
   const [state, formAction, pending] = useActionState(action, {
     success: false,
   });
 
   return (
-    <Dialog>
-      <DialogTrigger>{trigger}</DialogTrigger>
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {trigger && <DialogTrigger>{trigger}</DialogTrigger>}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>

@@ -1,7 +1,8 @@
 import { createNotification } from "@/lib/actions/notifications";
-import { notifications } from "@/lib/db/schema";
+import { notifications, users } from "@/lib/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import type { DB } from "@/lib/db/types";
+import { sendNotificationEmail } from "@/lib/email/send-notification";
 
 export async function triggerNotification(
   db: DB,
@@ -52,5 +53,23 @@ export async function triggerNotification(
     entityId: data.entityId,
   });
 
-  // TODO: Email integration will be connected in Unit 8
+  // Fire-and-forget email
+  if (process.env.RESEND_API_KEY) {
+    const [targetUser, actorUser] = await Promise.all([
+      db.select().from(users).where(eq(users.id, data.targetUserId)).get(),
+      db.select().from(users).where(eq(users.id, data.actorId)).get(),
+    ]);
+
+    if (targetUser?.email) {
+      void sendNotificationEmail(data.type, {
+        email: targetUser.email,
+        name: targetUser.name ?? undefined,
+      }, {
+        entityType: data.entityType,
+        entityId: data.entityId,
+        title: data.title,
+        actorName: actorUser?.name ?? undefined,
+      });
+    }
+  }
 }

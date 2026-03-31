@@ -2,8 +2,9 @@ import Link from "next/link";
 import {
   FolderIcon,
   LayoutDashboardIcon,
-  ListIcon,
+  PackageIcon,
   SettingsIcon,
+  ShieldIcon,
   ZapIcon,
 } from "lucide-react";
 import { SidebarNavLink } from "@/components/features/sidebar-nav-link";
@@ -11,16 +12,26 @@ import { LoveNotes } from "@/components/features/love-notes";
 import { MobileSidebarContent } from "@/components/features/mobile-sidebar";
 import { UserMenu } from "@/components/features/user-menu";
 import { NotificationBell } from "@/components/features/notification-bell";
+import { QuickSubmit } from "@/components/features/quick-submit";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { sprints, folders, userStories } from "@/lib/db/schema";
+import { sprints, folders, userStories, products } from "@/lib/db/schema";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
+
+type ProductTreeNode = {
+  id: string;
+  name: string;
+  color: string;
+  parentId: string | null;
+  backlogCount: number;
+  children: ProductTreeNode[];
+};
 
 // Cache sidebar data for 30s — avoids re-querying on every navigation
 const getSidebarData = unstable_cache(
   async () => {
-    const [allFolders, allSprints, backlogCountResult] = await Promise.all([
+    const [allFolders, allSprints, allProducts, backlogCounts] = await Promise.all([
       db
         .select({ id: folders.id, name: folders.name })
         .from(folders)
@@ -32,17 +43,49 @@ const getSidebarData = unstable_cache(
         .orderBy(desc(sprints.createdAt))
         .all(),
       db
-        .select({ count: sql<number>`COUNT(*)` })
+        .select()
+        .from(products)
+        .orderBy(asc(products.sortOrder), asc(products.createdAt))
+        .all(),
+      db
+        .select({
+          productId: userStories.productId,
+          count: sql<number>`COUNT(*)`.as("count"),
+        })
         .from(userStories)
         .where(eq(userStories.status, "backlog"))
-        .get(),
+        .groupBy(userStories.productId)
+        .all(),
     ]);
+
+    // Build product tree
+    const countMap = new Map(backlogCounts.map((c) => [c.productId, c.count]));
+    const nodeMap = new Map<string, ProductTreeNode>();
+    for (const p of allProducts) {
+      nodeMap.set(p.id, {
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        parentId: p.parentId,
+        backlogCount: countMap.get(p.id) ?? 0,
+        children: [],
+      });
+    }
+    const productTree: ProductTreeNode[] = [];
+    for (const node of nodeMap.values()) {
+      if (node.parentId && nodeMap.has(node.parentId)) {
+        nodeMap.get(node.parentId)!.children.push(node);
+      } else {
+        productTree.push(node);
+      }
+    }
 
     return {
       allFolders,
       activeSprints: allSprints.filter((s) => s.status !== "completed"),
       completedSprints: allSprints.filter((s) => s.status === "completed"),
-      backlogCount: backlogCountResult?.count ?? 0,
+      productTree,
+      allProducts,
     };
   },
   ["sidebar-data"],
@@ -53,12 +96,12 @@ function SidebarNav({
   allFolders,
   activeSprints,
   completedSprints,
-  backlogCount,
+  productTree,
 }: {
   allFolders: { id: string; name: string }[];
   activeSprints: { id: string; name: string; status: string; folderId: string | null }[];
   completedSprints: { id: string; name: string; status: string; folderId: string | null }[];
-  backlogCount: number;
+  productTree: ProductTreeNode[];
 }) {
   return (
     <>
@@ -76,103 +119,141 @@ function SidebarNav({
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        <SidebarNavLink
-          href="/backlog"
-          matchPrefixes={["/backlog", "/stories"]}
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
-          activeClassName="bg-green-500/10 text-green-400 border border-green-500/30"
-          inactiveClassName="text-gray-400 hover:bg-gray-800 hover:text-gray-200"
-        >
-          <ListIcon className="w-4 h-4" />
-          Backlog
-          {backlogCount > 0 && (
-            <span className="ml-auto text-xs font-mono px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-400">
-              {backlogCount}
-            </span>
+      <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+        {/* ── Backlogs Section ── */}
+        <div>
+          <div className="flex items-center gap-2 px-4 mb-1">
+            <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Backlogs</span>
+          </div>
+
+          <SidebarNavLink
+            href="/backlog"
+            matchPrefixes={["/backlog"]}
+            className="flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+            activeClassName="bg-green-500/10 text-green-400 border border-green-500/30"
+            inactiveClassName="text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+          >
+            <PackageIcon className="w-4 h-4" />
+            All Backlogs
+          </SidebarNavLink>
+
+          {productTree.length > 0 && (
+            <div className="ml-4 pl-3 border-l border-gray-800 space-y-0.5 py-1">
+              {productTree.map((product) => (
+                <div key={product.id}>
+                  <SidebarNavLink
+                    href={`/products/${product.id}/backlog`}
+                    matchPrefixes={[`/products/${product.id}`]}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
+                    activeClassName="text-green-400 bg-green-500/10"
+                    inactiveClassName="text-gray-500 hover:text-gray-200 hover:bg-gray-800/50"
+                  >
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: product.color }} />
+                    <span className="truncate">{product.name}</span>
+                    {product.backlogCount > 0 && (
+                      <span className="ml-auto text-[10px] text-gray-600 font-mono">{product.backlogCount}</span>
+                    )}
+                  </SidebarNavLink>
+                  {/* Nested products */}
+                  {product.children.length > 0 && (
+                    <div className="ml-3 space-y-0.5">
+                      {product.children.map((child) => (
+                        <SidebarNavLink
+                          key={child.id}
+                          href={`/products/${child.id}/backlog`}
+                          matchPrefixes={[`/products/${child.id}`]}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs transition-colors"
+                          activeClassName="text-green-400 bg-green-500/10"
+                          inactiveClassName="text-gray-600 hover:text-gray-300 hover:bg-gray-800/50"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: child.color }} />
+                          <span className="truncate">{child.name}</span>
+                          {child.backlogCount > 0 && (
+                            <span className="ml-auto text-[10px] text-gray-700 font-mono">{child.backlogCount}</span>
+                          )}
+                        </SidebarNavLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
-        </SidebarNavLink>
-        <SidebarNavLink
-          href="/sprints"
-          matchPrefixes={["/sprints", "/tasks"]}
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
-          activeClassName="bg-green-500/10 text-green-400 border border-green-500/30"
-          inactiveClassName="text-gray-400 hover:bg-gray-800 hover:text-gray-200"
-        >
-          <LayoutDashboardIcon className="w-4 h-4" />
-          Sprints
-          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-400" />
-        </SidebarNavLink>
-        {(activeSprints.length > 0 || allFolders.length > 0) && (
-          <div className="ml-4 pl-3 border-l border-gray-800 space-y-0.5 py-1">
-            {allFolders.map((folder) => {
-              const folderSprints = activeSprints.filter((s) => s.folderId === folder.id);
-              return (
-                <details key={folder.id} open>
-                  <summary className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs text-gray-500 hover:text-gray-300 cursor-pointer select-none">
-                    <FolderIcon className="w-3 h-3 text-amber-400/60" />
-                    <span className="truncate">{folder.name}</span>
-                    <span className="ml-auto text-[10px] text-gray-700">{folderSprints.length}</span>
-                  </summary>
-                  <div className="ml-3 space-y-0.5">
-                    {folderSprints.map((s) => (
-                      <Link
-                        key={s.id}
-                        href={`/sprints/${s.id}`}
-                        className="block px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:text-gray-200 hover:bg-gray-800/50 transition-colors truncate"
-                      >
-                        {s.name}
-                      </Link>
-                    ))}
-                  </div>
-                </details>
-              );
-            })}
-            {activeSprints.filter((s) => !s.folderId).map((s) => (
-              <Link
-                key={s.id}
-                href={`/sprints/${s.id}`}
-                className="block px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:text-gray-200 hover:bg-gray-800/50 transition-colors truncate"
-              >
-                {s.name}
-              </Link>
-            ))}
+        </div>
+
+        {/* ── Sprints Section ── */}
+        <div>
+          <div className="flex items-center gap-2 px-4 mb-1">
+            <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">Sprints</span>
           </div>
-        )}
-        {completedSprints.length > 0 && (
-          <div className="ml-4 pl-3 border-l border-gray-800/50 space-y-0.5 py-1 mt-1">
-            <span className="block px-3 py-1 text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
-              Completed
-            </span>
-            {completedSprints.map((s) => (
-              <Link
-                key={s.id}
-                href={`/sprints/${s.id}`}
-                className="block px-3 py-1.5 rounded-lg text-xs text-gray-600 hover:text-gray-400 hover:bg-gray-800/50 transition-colors truncate"
-              >
-                {s.name}
-              </Link>
-            ))}
-          </div>
-        )}
-        <SidebarNavLink
-          href="/settings"
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
-          activeClassName="bg-green-500/10 text-green-400 border border-green-500/30"
-          inactiveClassName="text-gray-400 hover:bg-gray-800 hover:text-gray-200"
-        >
-          <SettingsIcon className="w-4 h-4" />
-          Settings
-        </SidebarNavLink>
-        <SidebarNavLink
-          href="/admin"
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
-          activeClassName="bg-green-500/10 text-green-400 border border-green-500/30"
-          inactiveClassName="text-gray-400 hover:bg-gray-800 hover:text-gray-200"
-        >
-          <SettingsIcon className="w-4 h-4" />
-          Admin
-        </SidebarNavLink>
+
+          <SidebarNavLink
+            href="/sprints"
+            matchPrefixes={["/sprints", "/tasks"]}
+            className="flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+            activeClassName="bg-green-500/10 text-green-400 border border-green-500/30"
+            inactiveClassName="text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+          >
+            <LayoutDashboardIcon className="w-4 h-4" />
+            Sprint Overview
+            {activeSprints.length > 0 && (
+              <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-400" />
+            )}
+          </SidebarNavLink>
+
+          {(activeSprints.length > 0 || allFolders.length > 0) && (
+            <div className="ml-4 pl-3 border-l border-gray-800 space-y-0.5 py-1">
+              {allFolders.map((folder) => {
+                const folderSprints = activeSprints.filter((s) => s.folderId === folder.id);
+                return (
+                  <details key={folder.id} open>
+                    <summary className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs text-gray-500 hover:text-gray-300 cursor-pointer select-none">
+                      <FolderIcon className="w-3 h-3 text-amber-400/60" />
+                      <span className="truncate">{folder.name}</span>
+                      <span className="ml-auto text-[10px] text-gray-700">{folderSprints.length}</span>
+                    </summary>
+                    <div className="ml-3 space-y-0.5">
+                      {folderSprints.map((s) => (
+                        <Link
+                          key={s.id}
+                          href={`/sprints/${s.id}`}
+                          className="block px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:text-gray-200 hover:bg-gray-800/50 transition-colors truncate"
+                        >
+                          {s.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </details>
+                );
+              })}
+              {activeSprints.filter((s) => !s.folderId).map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/sprints/${s.id}`}
+                  className="block px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:text-gray-200 hover:bg-gray-800/50 transition-colors truncate"
+                >
+                  {s.name}
+                </Link>
+              ))}
+            </div>
+          )}
+          {completedSprints.length > 0 && (
+            <div className="ml-4 pl-3 border-l border-gray-800/50 space-y-0.5 py-1 mt-1">
+              <span className="block px-3 py-1 text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
+                Completed
+              </span>
+              {completedSprints.map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/sprints/${s.id}`}
+                  className="block px-3 py-1.5 rounded-lg text-xs text-gray-600 hover:text-gray-400 hover:bg-gray-800/50 transition-colors truncate"
+                >
+                  {s.name}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </nav>
 
       {/* Love Notes */}
@@ -206,7 +287,7 @@ export default async function DashboardLayout({
       allFolders={sidebarData.allFolders}
       activeSprints={sidebarData.activeSprints}
       completedSprints={sidebarData.completedSprints}
-      backlogCount={sidebarData.backlogCount}
+      productTree={sidebarData.productTree}
     />
   );
 
@@ -224,12 +305,27 @@ export default async function DashboardLayout({
 
       {/* Main */}
       <main className="flex-1 overflow-auto pt-14 md:pt-0">
-        {/* Header bar with user menu */}
-        <div className="hidden md:flex items-center justify-end gap-2 px-8 py-3 border-b border-gray-800">
+        {/* Header bar with settings, admin, notifications, user menu */}
+        <div className="hidden md:flex items-center justify-end gap-1 px-8 py-3 border-b border-gray-800">
+          <Link
+            href="/settings"
+            className="p-2 text-gray-500 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors"
+            title="Settings"
+          >
+            <SettingsIcon className="w-4 h-4" />
+          </Link>
+          <Link
+            href="/admin"
+            className="p-2 text-gray-500 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors"
+            title="Admin"
+          >
+            <ShieldIcon className="w-4 h-4" />
+          </Link>
           {session?.user && <NotificationBell />}
           {session?.user && <UserMenu user={session.user} />}
         </div>
         <div className="p-4 md:p-8">{children}</div>
+        <QuickSubmit products={sidebarData.allProducts} />
       </main>
     </div>
   );

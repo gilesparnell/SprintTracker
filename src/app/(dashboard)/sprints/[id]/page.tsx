@@ -9,6 +9,7 @@ import { getStories } from "@/lib/actions/stories";
 import { getAllTags, getTagsForTasks } from "@/lib/actions/tags";
 import { getAllCustomers } from "@/lib/actions/customers";
 import { getActiveUsers } from "@/lib/actions/users";
+import { getAllProducts } from "@/lib/actions/products";
 import { getClickUpConfig } from "@/lib/actions/clickup-config";
 import { TaskListWrapper } from "@/components/features/task-list-wrapper";
 import { SprintClickUpLinkWrapper } from "@/components/features/sprint-clickup-link-wrapper";
@@ -17,6 +18,8 @@ import { EntityIcon } from "@/components/ui/entity-icon";
 import Link from "next/link";
 import {
   ArrowLeftIcon,
+  BookOpenIcon,
+  BugIcon,
   CalendarIcon,
   CheckCircle2Icon,
   CircleDotIcon,
@@ -24,6 +27,7 @@ import {
   LinkIcon,
   ListTodoIcon,
   ScrollTextIcon,
+  SparklesIcon,
 } from "lucide-react";
 
 const statusConfig: Record<
@@ -66,13 +70,14 @@ export default async function SprintDetailPage({
   }
 
   // Parallel fetch: all independent queries at once
-  const [sprintTasks, sprintStories, config, allTags, allCustomers, allUsers, taskCounts] = await Promise.all([
+  const [sprintTasks, sprintStories, config, allTags, allCustomers, allUsers, allProducts, taskCounts] = await Promise.all([
     getTasksBySprintId(db, id),
     getStories(db, { sprintId: id }),
     getClickUpConfig(),
     getAllTags(db),
     getAllCustomers(db),
     getActiveUsers(db),
+    getAllProducts(db),
     db
       .select({ status: tasks.status, count: count() })
       .from(tasks)
@@ -287,29 +292,45 @@ export default async function SprintDetailPage({
         <div className="mb-3">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Stories</h3>
           <div className="flex flex-col gap-1">
-            {sprintStories.map((story) => (
-              <Link
-                key={story.id}
-                href={`/stories/${story.id}`}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-800 bg-gray-900 hover:border-gray-700 hover:bg-gray-800/50 transition-colors group"
-              >
-                <EntityIcon type="story" className="w-3.5 h-3.5 shrink-0" />
-                <span className="text-[11px] font-mono text-gray-500">S-{story.sequenceNumber}</span>
-                <span className="text-xs text-gray-300 truncate group-hover:text-white transition-colors">{story.title}</span>
-                <span
-                  className={`ml-auto shrink-0 inline-flex items-center px-1.5 py-0.5 text-[10px] rounded-full border ${
-                    story.status === "done"
-                      ? "bg-green-900/20 text-green-400 border-green-500/30"
-                      : story.status === "in_sprint"
-                        ? "bg-blue-900/20 text-blue-400 border-blue-500/30"
-                        : "bg-gray-800 text-gray-400 border-gray-700"
-                  }`}
+            {sprintStories.map((story) => {
+              const typeIcons: Record<string, { icon: typeof BookOpenIcon; color: string }> = {
+                user_story: { icon: BookOpenIcon, color: "text-gray-400" },
+                feature_request: { icon: SparklesIcon, color: "text-purple-400" },
+                bug: { icon: BugIcon, color: "text-red-400" },
+              };
+              const typeConf = typeIcons[story.type] ?? typeIcons.user_story;
+              const TypeIcon = typeConf.icon;
+              const storyProduct = allProducts.find((p) => p.id === story.productId);
+              return (
+                <Link
+                  key={story.id}
+                  href={`/stories/${story.id}`}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-800 bg-gray-900 hover:border-gray-700 hover:bg-gray-800/50 transition-colors group"
                 >
-                  {story.status === "in_sprint" ? "In Sprint" : story.status === "done" ? "Done" : "Backlog"}
-                </span>
-                <span className="shrink-0 text-[10px] text-gray-600">{story.taskCount} {story.taskCount === 1 ? "task" : "tasks"}</span>
-              </Link>
-            ))}
+                  <TypeIcon className={`w-3.5 h-3.5 shrink-0 ${typeConf.color}`} />
+                  <span className="text-[11px] font-mono text-gray-500">S-{story.sequenceNumber}</span>
+                  <span className="text-xs text-gray-300 truncate group-hover:text-white transition-colors">{story.title}</span>
+                  {storyProduct && (
+                    <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border border-gray-700 bg-gray-800/50 text-gray-400">
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: storyProduct.color }} />
+                      {storyProduct.name}
+                    </span>
+                  )}
+                  <span
+                    className={`ml-auto shrink-0 inline-flex items-center px-1.5 py-0.5 text-[10px] rounded-full border ${
+                      story.status === "done"
+                        ? "bg-green-900/20 text-green-400 border-green-500/30"
+                        : story.status === "in_sprint"
+                          ? "bg-blue-900/20 text-blue-400 border-blue-500/30"
+                          : "bg-gray-800 text-gray-400 border-gray-700"
+                    }`}
+                  >
+                    {story.status === "in_sprint" ? "In Sprint" : story.status === "done" ? "Done" : "Backlog"}
+                  </span>
+                  <span className="shrink-0 text-[10px] text-gray-600">{story.taskCount} {story.taskCount === 1 ? "task" : "tasks"}</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}

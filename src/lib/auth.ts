@@ -3,6 +3,18 @@ import Google from "next-auth/providers/google";
 import { authConfig } from "./auth.config";
 import { db } from "./db";
 import { isEmailAllowed, upsertUser, getUserByEmail } from "./actions/users";
+import { unstable_cache } from "next/cache";
+
+// Cache user status for 60s — avoids a DB query on every single request
+const getCachedUserStatus = unstable_cache(
+  async (userId: string) => {
+    const { getUserById } = await import("./actions/users");
+    const user = await getUserById(db, userId);
+    return user ? { exists: true, status: user.status } : { exists: false, status: null };
+  },
+  ["user-auth-status"],
+  { revalidate: 60 }
+);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -55,15 +67,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
-      // On every request, re-check user status for immediate revocation
+      // Re-check user status (cached 60s) for revocation
       if (token.id) {
-        const { getUserById } = await import("./actions/users");
-        const dbUser = await getUserById(db, token.id as string);
-        if (!dbUser || dbUser.status === "inactive") {
-          // Force re-auth by returning empty token
+        const cached = await getCachedUserStatus(token.id as string);
+        if (!cached.exists || cached.status === "inactive") {
           return {} as typeof token;
         }
-        token.status = dbUser.status;
+        token.status = cached.status;
       }
 
       return token;

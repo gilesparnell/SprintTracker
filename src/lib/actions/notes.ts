@@ -1,12 +1,13 @@
 "use server";
 
 import { eq, and, desc } from "drizzle-orm";
-import { notes } from "@/lib/db/schema";
+import { notes, userStories, tasks, subTasks } from "@/lib/db/schema";
 import { createNoteSchema, updateNoteSchema } from "@/lib/validators/note";
 import { v4 as uuid } from "uuid";
 import type { DB } from "@/lib/db/types";
 import { parseZodErrors } from "@/lib/helpers/zod-errors";
 import type { ActionResult } from "@/lib/types";
+import { triggerNotification } from "@/lib/helpers/notify";
 
 type Note = typeof notes.$inferSelect;
 
@@ -36,6 +37,47 @@ export async function createNote(
   });
 
   const note = await db.select().from(notes).where(eq(notes.id, id)).get();
+
+  // Notify entity assignee when someone else adds a note
+  const entityType = parsed.data.entityType as "story" | "task" | "subtask";
+  const entityId = parsed.data.entityId;
+  let assignee: { assignedTo: string | null; title: string; sequenceNumber: number | null } | undefined;
+
+  if (entityType === "story") {
+    const row = await db
+      .select({ assignedTo: userStories.assignedTo, title: userStories.title, sequenceNumber: userStories.sequenceNumber })
+      .from(userStories)
+      .where(eq(userStories.id, entityId))
+      .get();
+    assignee = row ?? undefined;
+  } else if (entityType === "task") {
+    const row = await db
+      .select({ assignedTo: tasks.assignedTo, title: tasks.title, sequenceNumber: tasks.sequenceNumber })
+      .from(tasks)
+      .where(eq(tasks.id, entityId))
+      .get();
+    assignee = row ?? undefined;
+  } else if (entityType === "subtask") {
+    const row = await db
+      .select({ assignedTo: subTasks.assignedTo, title: subTasks.title, sequenceNumber: subTasks.sequenceNumber })
+      .from(subTasks)
+      .where(eq(subTasks.id, entityId))
+      .get();
+    assignee = row ?? undefined;
+  }
+
+  if (assignee?.assignedTo && assignee.assignedTo !== userId) {
+    const prefix = entityType === "story" ? "S" : entityType === "task" ? "T" : "ST";
+    void triggerNotification(db, {
+      type: "note",
+      actorId: userId,
+      targetUserId: assignee.assignedTo,
+      entityType,
+      entityId,
+      title: `New note on ${prefix}-${assignee.sequenceNumber}: ${assignee.title}`,
+    });
+  }
+
   return { success: true, data: note! };
 }
 

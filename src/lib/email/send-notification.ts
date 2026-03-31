@@ -1,4 +1,10 @@
 import { getResend } from "./client";
+import { render } from "@react-email/render";
+import { createElement } from "react";
+import TaskAssignedEmail from "./templates/task-assigned";
+import StoryAssignedEmail from "./templates/story-assigned";
+import SubtaskAssignedEmail from "./templates/subtask-assigned";
+import NoteAddedEmail from "./templates/note-added";
 
 type NotificationType = "assignment" | "reassignment" | "note";
 
@@ -26,42 +32,63 @@ function buildSubject(type: NotificationType, context: NotificationContext): str
   }
 }
 
-function buildHtml(
+async function buildHtml(
   type: NotificationType,
   recipient: Recipient,
   context: NotificationContext,
-): string {
+): Promise<string> {
   const name = recipient.name ?? "there";
   const actor = context.actorName ?? "Someone";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-  let heading: string;
-  let body: string;
-
-  switch (type) {
-    case "assignment":
-      heading = "You've been assigned a task";
-      body = `<strong>${actor}</strong> assigned you to <strong>${context.entityType} ${context.entityId}</strong>: ${context.title}.`;
-      break;
-    case "reassignment":
-      heading = "A task has been reassigned to you";
-      body = `<strong>${actor}</strong> reassigned <strong>${context.entityType} ${context.entityId}</strong>: ${context.title} to you.`;
-      break;
-    case "note":
-      heading = "New note on your task";
-      body = `<strong>${actor}</strong> added a note on <strong>${context.entityType} ${context.entityId}</strong>: ${context.title}.`;
-      break;
+  if (type === "note") {
+    return render(
+      createElement(NoteAddedEmail, {
+        recipientName: name,
+        entityTitle: context.title,
+        entityId: context.entityId,
+        authorName: actor,
+        notePreview: "",
+        appUrl,
+      })
+    );
   }
 
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8" /></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #1a1a1a;">
-  <h2 style="margin-bottom: 8px;">${heading}</h2>
-  <p>Hi ${name},</p>
-  <p>${body}</p>
-</body>
-</html>`.trim();
+  // assignment or reassignment
+  if (context.entityType === "story") {
+    return render(
+      createElement(StoryAssignedEmail, {
+        assigneeName: name,
+        storyTitle: context.title,
+        storyId: context.entityId,
+        assignedBy: actor,
+        appUrl,
+      })
+    );
+  }
+
+  if (context.entityType === "subtask") {
+    return render(
+      createElement(SubtaskAssignedEmail, {
+        assigneeName: name,
+        subtaskTitle: context.title,
+        subtaskId: context.entityId,
+        assignedBy: actor,
+        appUrl,
+      })
+    );
+  }
+
+  // Default: task
+  return render(
+    createElement(TaskAssignedEmail, {
+      assigneeName: name,
+      taskTitle: context.title,
+      taskId: context.entityId,
+      assignedBy: actor,
+      appUrl,
+    })
+  );
 }
 
 export async function sendNotificationEmail(
@@ -71,7 +98,7 @@ export async function sendNotificationEmail(
 ): Promise<void> {
   const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
   const subject = buildSubject(type, context);
-  const html = buildHtml(type, recipient, context);
+  const html = await buildHtml(type, recipient, context);
 
   const { error } = await getResend().emails.send({
     from,

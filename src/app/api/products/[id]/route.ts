@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { db } from "@/lib/db";
+import { updateProduct, deleteProduct } from "@/lib/actions/products";
 import { requireAuth } from "@/lib/auth-helpers";
-import { updateStory, deleteStory, getStoryById } from "@/lib/actions/stories";
+import { products } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 export async function GET(
   _request: Request,
@@ -12,11 +14,11 @@ export async function GET(
   if (!authResult.authenticated) return authResult.response;
 
   const { id } = await params;
-  const story = await getStoryById(db, id);
-  if (!story) {
-    return NextResponse.json({ error: "Story not found" }, { status: 404 });
+  const product = await db.select().from(products).where(eq(products.id, id)).get();
+  if (!product) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  return NextResponse.json(story);
+  return NextResponse.json(product);
 }
 
 export async function PATCH(
@@ -28,36 +30,20 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const result = await updateStory(db, authResult.userId, id, body);
+  const result = await updateProduct(db, id, body);
   if (result.success) revalidateTag("sidebar", "seconds");
   return NextResponse.json(result);
 }
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireAuth();
   if (!authResult.authenticated) return authResult.response;
 
   const { id } = await params;
-
-  // Parse optional body for delete mode
-  let mode: "cascade" | "unlink" | "reassign" = "unlink";
-  let reassignStoryId: string | undefined;
-  try {
-    const body = await request.json();
-    if (body.mode === "cascade" || body.mode === "unlink" || body.mode === "reassign") {
-      mode = body.mode;
-    }
-    if (body.reassignStoryId) {
-      reassignStoryId = body.reassignStoryId;
-    }
-  } catch {
-    // No body or invalid JSON — use defaults
-  }
-
-  const result = await deleteStory(db, authResult.userId, id, mode, reassignStoryId);
+  const result = await deleteProduct(db, id);
   if (result.success) revalidateTag("sidebar", "seconds");
   return NextResponse.json(result);
 }

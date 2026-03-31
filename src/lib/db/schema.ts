@@ -30,6 +30,24 @@ export const sequences = sqliteTable("sequences", {
   value: integer("value").notNull().default(0),
 });
 
+// ─── Products ──────────────────────────────────────────────
+
+export const products = sqliteTable("products", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  color: text("color").notNull().default("#6b7280"),
+  parentId: text("parent_id").references((): any => products.id, { onDelete: "cascade" }),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+}, (table) => [
+  index("idx_products_parent").on(table.parentId),
+]);
+
 // ─── Core Entities ──────────────────────────────────────────
 
 export const folders = sqliteTable("folders", {
@@ -69,6 +87,9 @@ export const userStories = sqliteTable("user_stories", {
   sequenceNumber: integer("sequence_number").notNull().unique(),
   title: text("title").notNull(),
   description: text("description"),
+  type: text("type", { enum: ["user_story", "feature_request", "bug"] })
+    .notNull()
+    .default("user_story"),
   priority: text("priority", { enum: ["low", "medium", "high", "urgent"] })
     .notNull()
     .default("medium"),
@@ -76,6 +97,7 @@ export const userStories = sqliteTable("user_stories", {
     .notNull()
     .default("backlog"),
   sortOrder: integer("sort_order").notNull().default(0),
+  productId: text("product_id").references(() => products.id, { onDelete: "set null" }),
   assignedTo: text("assigned_to").references(() => users.id, { onDelete: "set null" }),
   createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
   sprintId: text("sprint_id").references(() => sprints.id, { onDelete: "set null" }),
@@ -89,6 +111,8 @@ export const userStories = sqliteTable("user_stories", {
 }, (table) => [
   index("idx_stories_status_sort").on(table.status, table.sortOrder),
   index("idx_stories_assignee").on(table.assignedTo, table.status),
+  index("idx_stories_product").on(table.productId, table.status),
+  index("idx_stories_type").on(table.type, table.status),
 ]);
 
 export const tasks = sqliteTable("tasks", {

@@ -1,10 +1,22 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
-import { PlusIcon, FilterIcon } from "lucide-react";
+import Link from "next/link";
+import { PlusIcon, FilterIcon, UnlinkIcon, Trash2Icon, CheckSquareIcon, XSquareIcon } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { EntityIcon } from "@/components/ui/entity-icon";
 import { StoryCard } from "@/components/features/story-card";
 import { StoryFormDialog } from "@/components/features/story-form";
 import {
@@ -35,15 +47,39 @@ type Sprint = {
   status: string;
 };
 
+type UnlinkedTask = {
+  id: string;
+  sequenceNumber: number | null;
+  title: string;
+  status: string;
+  priority: string;
+  assignedTo: string | null;
+};
+
+const taskStatusConfig: Record<string, { label: string; bg: string; text: string; border: string; dot: string }> = {
+  open: { label: "Open", bg: "bg-amber-900/20", text: "text-amber-400", border: "border-amber-500/30", dot: "bg-amber-400" },
+  in_progress: { label: "In Progress", bg: "bg-blue-900/20", text: "text-blue-400", border: "border-blue-500/30", dot: "bg-blue-400" },
+  done: { label: "Done", bg: "bg-green-900/20", text: "text-green-400", border: "border-green-500/30", dot: "bg-green-400" },
+};
+
+const priorityConfig: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  low: { label: "Low", bg: "bg-gray-800", text: "text-gray-400", border: "border-gray-700" },
+  medium: { label: "Medium", bg: "bg-blue-900/20", text: "text-blue-400", border: "border-blue-500/30" },
+  high: { label: "High", bg: "bg-amber-900/20", text: "text-amber-400", border: "border-amber-500/30" },
+  urgent: { label: "Urgent", bg: "bg-red-900/20", text: "text-red-400", border: "border-red-500/30" },
+};
+
 function SortableStoryCard({
   story,
   index,
+  allStories,
   users,
   customers,
   sprints,
 }: {
   story: StoryWithTaskCount;
   index: number;
+  allStories: StoryWithTaskCount[];
   users: User[];
   customers: Customer[];
   sprints: Sprint[];
@@ -63,6 +99,7 @@ function SortableStoryCard({
     >
       <StoryCard
         story={story}
+        allStories={allStories}
         users={users}
         customers={customers}
         sprints={sprints}
@@ -71,16 +108,26 @@ function SortableStoryCard({
   );
 }
 
+type Product = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 export function BacklogList({
   stories: initialStories,
   users,
   customers,
   sprints,
+  products = [],
+  unlinkedTasks: initialUnlinkedTasks = [],
 }: {
   stories: StoryWithTaskCount[];
   users: User[];
   customers: Customer[];
   sprints: Sprint[];
+  products?: Product[];
+  unlinkedTasks?: UnlinkedTask[];
 }) {
   const router = useRouter();
   const [stories, setStories] = useState(initialStories);
@@ -88,12 +135,48 @@ export function BacklogList({
   const [filterCustomer, setFilterCustomer] = useState("__all__");
   const [createOpen, setCreateOpen] = useState(false);
   const snapshotRef = useRef<StoryWithTaskCount[] | null>(null);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Sync from server when props change
+  const hasSelections = selectedTaskIds.length > 0;
+
+  function toggleTaskSelection(taskId: string) {
+    setSelectedTaskIds((prev) =>
+      prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
+    );
+  }
+
+  function selectAllTasks() {
+    setSelectedTaskIds(initialUnlinkedTasks.map((t) => t.id));
+  }
+
+  function deselectAllTasks() {
+    setSelectedTaskIds([]);
+  }
+
+  async function handleBulkDelete() {
+    setIsDeleting(true);
+    try {
+      await Promise.all(
+        selectedTaskIds.map((id) =>
+          fetch(`/api/tasks/${id}`, { method: "DELETE" })
+        )
+      );
+      setSelectedTaskIds([]);
+      setDeleteDialogOpen(false);
+      router.refresh();
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  // Sync from server when props change (e.g. after router.refresh())
   const storiesKey = initialStories.map((s) => s.id + s.sortOrder).join(",");
-  useState(() => {
+  useEffect(() => {
     setStories(initialStories);
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storiesKey]);
 
   // Filter stories
   const filteredStories = stories.filter((s) => {
@@ -215,13 +298,14 @@ export function BacklogList({
             mode="create"
             users={users}
             customers={customers}
+            products={products}
             open={createOpen}
             onOpenChange={setCreateOpen}
             trigger={
-              <button className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded-xl transition-colors">
+              <span className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-medium rounded-xl transition-colors cursor-pointer">
                 <PlusIcon className="w-4 h-4" />
                 Create Story
-              </button>
+              </span>
             }
           />
         </div>
@@ -246,12 +330,13 @@ export function BacklogList({
           }}
           onDragEnd={handleDragEnd}
         >
-          <div className="space-y-2">
+          <div className="divide-y divide-gray-800/50">
             {filteredStories.map((story, index) => (
               <SortableStoryCard
                 key={story.id}
                 story={story}
                 index={index}
+                allStories={stories}
                 users={users}
                 customers={customers}
                 sprints={sprints}
@@ -260,6 +345,162 @@ export function BacklogList({
           </div>
         </DragDropProvider>
       )}
+
+      {/* Unlinked Tasks */}
+      {initialUnlinkedTasks.length > 0 && (
+        <div className="mt-8 space-y-3">
+          <div className="flex items-center gap-2">
+            <UnlinkIcon className="w-4 h-4 text-gray-500" />
+            <h2 className="text-sm font-medium text-gray-400">
+              Unlinked Tasks
+            </h2>
+            <span className="text-xs text-gray-600">
+              ({initialUnlinkedTasks.length})
+            </span>
+          </div>
+          <p className="text-xs text-gray-600">
+            Tasks not linked to any story or sprint
+          </p>
+
+          {/* Bulk action toolbar */}
+          {hasSelections && (
+            <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-gray-700 bg-gray-800/60">
+              <span className="text-sm text-gray-300">
+                {selectedTaskIds.length} task{selectedTaskIds.length !== 1 ? "s" : ""} selected
+              </span>
+              <button
+                onClick={selectAllTasks}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+              >
+                <CheckSquareIcon className="w-3.5 h-3.5" />
+                Select All
+              </button>
+              <button
+                onClick={deselectAllTasks}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+              >
+                <XSquareIcon className="w-3.5 h-3.5" />
+                Deselect All
+              </button>
+              <button
+                onClick={() => setDeleteDialogOpen(true)}
+                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-400 bg-red-900/20 border border-red-500/30 rounded-lg hover:bg-red-900/40 transition-colors"
+              >
+                <Trash2Icon className="w-3.5 h-3.5" />
+                Delete Selected
+              </button>
+            </div>
+          )}
+
+          <div className="divide-y divide-gray-800/50">
+            {initialUnlinkedTasks.map((t) => {
+              const tStatus = taskStatusConfig[t.status] ?? taskStatusConfig.open;
+              const tPriority = priorityConfig[t.priority] ?? priorityConfig.medium;
+              const tAssignee = users.find((u) => u.id === t.assignedTo);
+              const isSelected = selectedTaskIds.includes(t.id);
+
+              const rowContent = (
+                <>
+                  {/* Checkbox */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleTaskSelection(t.id);
+                    }}
+                    className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                      isSelected
+                        ? "bg-red-500 border-red-500"
+                        : "border-gray-600 hover:border-gray-400"
+                    }`}
+                  >
+                    {isSelected && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border ${tStatus.bg} ${tStatus.text} ${tStatus.border}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${tStatus.dot}`} />
+                    {tStatus.label}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs text-gray-500 font-mono">
+                    <EntityIcon type="task" />
+                    T-{t.sequenceNumber}
+                  </span>
+                  <span className="text-sm text-gray-300 truncate flex-1">{t.title}</span>
+                  <span className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded border ${tPriority.bg} ${tPriority.text} ${tPriority.border}`}>
+                    {tPriority.label}
+                  </span>
+                  {tAssignee && (
+                    tAssignee.image ? (
+                      <img src={tAssignee.image} alt="" className="w-4 h-4 rounded-full" />
+                    ) : (
+                      <span className="w-4 h-4 rounded-full bg-gray-700 flex items-center justify-center text-[8px] font-bold text-gray-400">
+                        {(tAssignee.name ?? "?").charAt(0).toUpperCase()}
+                      </span>
+                    )
+                  )}
+                </>
+              );
+
+              if (hasSelections) {
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => toggleTaskSelection(t.id)}
+                    className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${
+                      isSelected
+                        ? "border border-red-500/30 bg-red-900/10 rounded-lg"
+                        : "hover:bg-gray-800/40"
+                    }`}
+                  >
+                    {rowContent}
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={t.id}
+                  href={`/tasks/${t.id}`}
+                  className="flex items-center gap-2 px-3 py-2 hover:bg-gray-800/40 transition-colors"
+                >
+                  {rowContent}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Bulk delete confirmation dialogue */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Delete {selectedTaskIds.length} task{selectedTaskIds.length !== 1 ? "s" : ""}?
+            </DialogTitle>
+            <DialogDescription>
+              This will permanently delete the selected tasks, their subtasks, notes, and notifications.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>
+              Cancel
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+            >
+              <Trash2Icon className="w-4 h-4" />
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

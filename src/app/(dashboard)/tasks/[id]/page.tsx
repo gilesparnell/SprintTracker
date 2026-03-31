@@ -14,6 +14,8 @@ import {
   UserIcon,
   ListTodoIcon,
 } from "lucide-react";
+import { EntityIcon } from "@/components/ui/entity-icon";
+import { TaskActions } from "@/components/features/task-actions";
 
 const statusConfig: Record<
   string,
@@ -88,7 +90,8 @@ export default async function TaskDetailPage({
         >
           <ArrowLeftIcon className="w-4 h-4" />
         </Link>
-        <h2 className="text-base md:text-lg font-bold text-white">
+        <h2 className="text-base md:text-lg font-bold text-white inline-flex items-center gap-1.5">
+          <EntityIcon type="task" className="w-4 h-4" />
           <span className="text-gray-500 font-normal">T-{task.sequenceNumber}</span>{" "}
           {task.title}
         </h2>
@@ -105,6 +108,16 @@ export default async function TaskDetailPage({
         <span className={`text-xs font-medium ${priority.color}`}>
           {priority.label} priority
         </span>
+      </div>
+
+      {/* Actions */}
+      <div className="mb-4">
+        <TaskActions
+          taskId={id}
+          taskTitle={task.title}
+          sprintId={task.sprintId}
+          subtaskCount={subtasks.length}
+        />
       </div>
 
       {/* Meta info */}
@@ -181,7 +194,8 @@ export default async function TaskDetailPage({
                     />
                     {stStatus.label}
                   </span>
-                  <span className="text-xs text-gray-500 font-mono">
+                  <span className="inline-flex items-center gap-1 text-xs text-gray-500 font-mono">
+                    <EntityIcon type="subtask" />
                     ST-{st.sequenceNumber}
                   </span>
                   <span className="text-sm text-gray-300 truncate flex-1">

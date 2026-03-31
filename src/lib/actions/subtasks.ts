@@ -13,6 +13,7 @@ import type { DB } from "@/lib/db/types";
 import type { ActionResult } from "@/lib/types";
 import { parseZodErrors } from "@/lib/helpers/zod-errors";
 import { getNextSequenceNumber } from "@/lib/helpers/sequence";
+import { triggerNotification } from "@/lib/helpers/notify";
 
 type SubTask = typeof subTasks.$inferSelect;
 
@@ -62,6 +63,18 @@ export async function createSubTask(
     .where(eq(subTasks.id, id))
     .get();
 
+  // Notify assignee on creation
+  if (subtask?.assignedTo && subtask.assignedTo !== userId) {
+    void triggerNotification(db, {
+      type: "assignment",
+      actorId: userId,
+      targetUserId: subtask.assignedTo,
+      entityType: "subtask",
+      entityId: id,
+      title: `You were assigned to ST-${sequenceNumber}: ${parsed.data.title}`,
+    });
+  }
+
   return { success: true, data: subtask! };
 }
 
@@ -75,6 +88,12 @@ export async function updateSubTask(
   if (!parsed.success) {
     return { success: false, errors: parseZodErrors(parsed.error) };
   }
+
+  const oldSubTask = await db
+    .select()
+    .from(subTasks)
+    .where(eq(subTasks.id, id))
+    .get();
 
   const updateValues: Record<string, unknown> = {
     title: parsed.data.title,
@@ -100,6 +119,19 @@ export async function updateSubTask(
     .from(subTasks)
     .where(eq(subTasks.id, id))
     .get();
+
+  // Notify on (re)assignment change
+  if (subtask && userId && subtask.assignedTo && subtask.assignedTo !== oldSubTask?.assignedTo) {
+    const isNew = !oldSubTask?.assignedTo;
+    void triggerNotification(db, {
+      type: isNew ? "assignment" : "reassignment",
+      actorId: userId,
+      targetUserId: subtask.assignedTo,
+      entityType: "subtask",
+      entityId: id,
+      title: `You were ${isNew ? "assigned to" : "reassigned"} ST-${subtask.sequenceNumber}: ${subtask.title}`,
+    });
+  }
 
   return { success: true, data: subtask! };
 }

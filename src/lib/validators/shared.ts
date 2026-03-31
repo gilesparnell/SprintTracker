@@ -7,3 +7,5 @@ export const taskStatusEnum = z.enum(["open", "in_progress", "done"]);
 export const storyStatusEnum = z.enum(["backlog", "in_sprint", "done"]);
 
 export const entityTypeEnum = z.enum(["story", "task", "subtask"]);
+
+export const storyTypeEnum = z.enum(["user_story", "feature_request", "bug"]);

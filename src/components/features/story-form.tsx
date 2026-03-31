@@ -30,11 +30,20 @@ type Customer = {
   color: string;
 };
 
+type Product = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 type StoryDefaults = {
   id?: string;
   title?: string;
   description?: string | null;
+  type?: string;
+  status?: string;
   priority?: string;
+  productId?: string | null;
   assignedTo?: string | null;
   customerId?: string | null;
 };
@@ -44,6 +53,7 @@ export function StoryFormDialog({
   defaults,
   users,
   customers,
+  products = [],
   trigger,
   open: controlledOpen,
   onOpenChange,
@@ -52,6 +62,7 @@ export function StoryFormDialog({
   defaults?: StoryDefaults;
   users: User[];
   customers: Customer[];
+  products?: Product[];
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -63,7 +74,10 @@ export function StoryFormDialog({
 
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [storyType, setStoryType] = useState(defaults?.type ?? "user_story");
+  const [status, setStatus] = useState(defaults?.status ?? "backlog");
   const [priority, setPriority] = useState(defaults?.priority ?? "medium");
+  const [productId, setProductId] = useState(defaults?.productId ?? (products[0]?.id || "__none__"));
   const [assignee, setAssignee] = useState(defaults?.assignedTo ?? "__none__");
   const [customer, setCustomer] = useState(defaults?.customerId ?? "__none__");
 
@@ -71,14 +85,20 @@ export function StoryFormDialog({
   const defaultsKey = [
     defaults?.id,
     defaults?.title,
+    defaults?.type,
+    defaults?.status,
     defaults?.priority,
+    defaults?.productId,
     defaults?.assignedTo,
     defaults?.customerId,
   ].join("|");
 
   useEffect(() => {
     if (dialogOpen) {
+      setStoryType(defaults?.type ?? "user_story");
+      setStatus(defaults?.status ?? "backlog");
       setPriority(defaults?.priority ?? "medium");
+      setProductId(defaults?.productId ?? (products[0]?.id || "__none__"));
       setAssignee(defaults?.assignedTo ?? "__none__");
       setCustomer(defaults?.customerId ?? "__none__");
       setErrors({});
@@ -103,7 +123,10 @@ export function StoryFormDialog({
     const body: Record<string, unknown> = {
       title: formData.get("title") as string,
       description: (formData.get("description") as string) || null,
+      type: storyType,
+      status,
       priority,
+      productId: productId === "__none__" ? null : productId,
       assignedTo: assignee === "__none__" ? null : assignee,
       customerId: customer === "__none__" ? null : customer,
     };
@@ -121,6 +144,13 @@ export function StoryFormDialog({
         body: JSON.stringify(body),
       });
 
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("[StoryForm] API error:", res.status, text);
+        setErrors({ form: [`Server error: ${res.status}`] });
+        return;
+      }
+
       const result = await res.json();
 
       if (result.success) {
@@ -129,7 +159,8 @@ export function StoryFormDialog({
       } else if (result.errors) {
         setErrors(result.errors);
       }
-    } catch {
+    } catch (err) {
+      console.error("[StoryForm] submit error:", err);
       setErrors({ form: ["Something went wrong. Please try again."] });
     } finally {
       setPending(false);
@@ -179,10 +210,88 @@ export function StoryFormDialog({
             />
           </div>
 
-          {/* Priority + Assignee row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-300">
+          {/* Type + Product row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-300 shrink-0">
+                Type
+              </label>
+              <Select value={storyType} onValueChange={(v) => setStoryType(v ?? "user_story")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user_story">Story</SelectItem>
+                  <SelectItem value="feature_request">Feature</SelectItem>
+                  <SelectItem value="bug">Bug</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {products.length > 0 && (
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-gray-300 shrink-0">
+                  Product
+                </label>
+                <Select value={productId ?? "__none__"} onValueChange={(v) => setProductId(v ?? "__none__")}>
+                  <SelectTrigger>
+                    <SelectValue>
+                      {productId === "__none__"
+                        ? "No product"
+                        : (() => {
+                            const p = products.find((p) => p.id === productId);
+                            return p ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <span
+                                  className="w-2 h-2 rounded-full shrink-0"
+                                  style={{ backgroundColor: p.color }}
+                                />
+                                {p.name}
+                              </span>
+                            ) : (
+                              "No product"
+                            );
+                          })()}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: p.color }}
+                          />
+                          {p.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          {/* Status + Priority row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-300 shrink-0">
+                Status
+              </label>
+              <Select value={status} onValueChange={(v) => setStatus(v ?? "backlog")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="backlog">Backlog</SelectItem>
+                  <SelectItem value="in_sprint">In Sprint</SelectItem>
+                  <SelectItem value="done">Done</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-300 shrink-0">
                 Priority
               </label>
               <Select value={priority} onValueChange={(v) => setPriority(v ?? "medium")}>
@@ -197,9 +306,54 @@ export function StoryFormDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-300">
+          {/* Customer + Assignee row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-300 shrink-0">
+                Customer
+              </label>
+              <Select value={customer} onValueChange={(v) => setCustomer(v ?? "__none__")}>
+                <SelectTrigger>
+                  <SelectValue>
+                    {customer === "__none__"
+                      ? "No customer"
+                      : (() => {
+                          const c = customers.find((c) => c.id === customer);
+                          return c ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              <span
+                                className="w-2 h-2 rounded-full shrink-0"
+                                style={{ backgroundColor: c.color }}
+                              />
+                              {c.name}
+                            </span>
+                          ) : (
+                            "No customer"
+                          );
+                        })()}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No customer</SelectItem>
+                  {customers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: c.color }}
+                        />
+                        {c.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-300 shrink-0">
                 Assignee
               </label>
               <Select value={assignee} onValueChange={(v) => setAssignee(v ?? "__none__")}>
@@ -222,52 +376,15 @@ export function StoryFormDialog({
             </div>
           </div>
 
-          {/* Customer */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-300">
-              Customer
-            </label>
-            <Select value={customer} onValueChange={(v) => setCustomer(v ?? "__none__")}>
-              <SelectTrigger>
-                <SelectValue>
-                  {customer === "__none__"
-                    ? "No customer"
-                    : (() => {
-                        const c = customers.find((c) => c.id === customer);
-                        return c ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <span
-                              className="w-2 h-2 rounded-full shrink-0"
-                              style={{ backgroundColor: c.color }}
-                            />
-                            {c.name}
-                          </span>
-                        ) : (
-                          "No customer"
-                        );
-                      })()}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">No customer</SelectItem>
-                {customers.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    <span className="inline-flex items-center gap-1.5">
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: c.color }}
-                      />
-                      {c.name}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Form-level error */}
-          {errors.form && (
-            <p className="text-sm text-red-400">{errors.form[0]}</p>
+          {Object.keys(errors).length > 0 && (
+            <div className="space-y-1">
+              {Object.entries(errors).map(([field, msgs]) => (
+                <p key={field} className="text-sm text-red-400">
+                  {field !== "form" ? `${field}: ` : ""}{msgs[0]}
+                </p>
+              ))}
+            </div>
           )}
 
           {/* Submit */}

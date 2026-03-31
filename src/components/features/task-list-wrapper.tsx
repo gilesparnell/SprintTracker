@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { TaskList } from "./task-list";
 import { KanbanBoard } from "./kanban-board";
 import { TaskFormDialog } from "./task-form";
+import { TaskDeleteDialog } from "./task-delete-dialog";
 import { KanbanIcon, ListIcon, PlusIcon, TagIcon, UsersIcon, XIcon } from "lucide-react";
 
 type Tag = {
@@ -51,6 +52,7 @@ export function TaskListWrapper({
   const router = useRouter();
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [deletingTask, setDeletingTask] = useState<Task | null>(null);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
 
@@ -94,11 +96,37 @@ export function TaskListWrapper({
     router.refresh();
   }
 
-  async function handleDelete(taskId: string) {
-    await fetch(`/api/tasks/${taskId}`, {
+  function handleDelete(taskId: string) {
+    const task = initialTasks.find((t) => t.id === taskId);
+    if (task) {
+      setDeletingTask(task);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deletingTask) return;
+    await fetch(`/api/tasks/${deletingTask.id}`, {
       method: "DELETE",
     });
+    setDeletingTask(null);
     router.refresh();
+  }
+
+  async function handleRemoveFromSprint(taskId: string) {
+    const res = await fetch(`/api/tasks/${taskId}/remove-from-sprint`, {
+      method: "POST",
+    });
+    if (res.ok) router.refresh();
+  }
+
+  async function handleConvertToStory(taskId: string) {
+    const res = await fetch(`/api/tasks/${taskId}/convert-to-story`, {
+      method: "POST",
+    });
+    const result = await res.json();
+    if (result.success && result.storyId) {
+      router.push(`/stories/${result.storyId}`);
+    }
   }
 
   async function handleEditTask(
@@ -206,10 +234,10 @@ export function TaskListWrapper({
             <TaskFormDialog
               action={handleCreateTask}
               trigger={
-                <button className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-500 rounded-lg transition-colors">
+                <span className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-500 rounded-lg transition-colors cursor-pointer">
                   <PlusIcon className="w-3 h-3" />
                   Add Task
-                </button>
+                </span>
               }
               title="New Task"
               allTags={allTags}
@@ -291,6 +319,8 @@ export function TaskListWrapper({
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}
           onEdit={setEditingTask}
+          onRemoveFromSprint={handleRemoveFromSprint}
+          onConvertToStory={handleConvertToStory}
           allUsers={allUsers}
         />
       ) : (
@@ -299,6 +329,8 @@ export function TaskListWrapper({
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}
           onEdit={setEditingTask}
+          onRemoveFromSprint={handleRemoveFromSprint}
+          onConvertToStory={handleConvertToStory}
           allUsers={allUsers}
         />
       )}
@@ -307,6 +339,7 @@ export function TaskListWrapper({
         <TaskFormDialog
           action={handleEditTask}
           title="Edit Task"
+          taskId={editingTask.id}
           defaultValues={{
             title: editingTask.title,
             description: editingTask.description ?? undefined,
@@ -315,6 +348,7 @@ export function TaskListWrapper({
             tagIds: editingTask.tags.map((t) => t.id),
             customerId: editingTask.customer?.id,
             assignedTo: editingTask.assignedTo ?? undefined,
+            sequenceNumber: editingTask.sequenceNumber,
           }}
           allTags={allTags}
           allCustomers={allCustomers}
@@ -323,6 +357,22 @@ export function TaskListWrapper({
           onOpenChange={(open) => {
             if (!open) setEditingTask(null);
           }}
+          onDelete={() => {
+            const task = editingTask;
+            setEditingTask(null);
+            setDeletingTask(task);
+          }}
+        />
+      )}
+
+      {deletingTask && (
+        <TaskDeleteDialog
+          task={deletingTask}
+          open={!!deletingTask}
+          onOpenChange={(open) => {
+            if (!open) setDeletingTask(null);
+          }}
+          onConfirm={confirmDelete}
         />
       )}
     </div>

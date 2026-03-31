@@ -5,14 +5,16 @@ import { DragDropProvider, useDroppable } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { move } from "@dnd-kit/helpers";
 import {
+  BookOpenIcon,
   CheckCircle2Icon,
   CircleDotIcon,
   ClockIcon,
   GripVerticalIcon,
   LinkIcon,
-  PencilIcon,
   Trash2Icon,
+  UnlinkIcon,
 } from "lucide-react";
+import { EntityIcon } from "@/components/ui/entity-icon";
 
 type Tag = {
   id: string;
@@ -86,6 +88,8 @@ function KanbanCard({
   index,
   onDelete,
   onEdit,
+  onRemoveFromSprint,
+  onConvertToStory,
   allUsers = [],
 }: {
   task: Task;
@@ -93,6 +97,8 @@ function KanbanCard({
   index: number;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  onRemoveFromSprint?: (taskId: string) => void;
+  onConvertToStory?: (taskId: string) => void;
   allUsers?: User[];
 }) {
   const { ref, isDragSource } = useSortable({
@@ -112,31 +118,27 @@ function KanbanCard({
         isDragSource ? "opacity-40 scale-95" : ""
       }`}
     >
-      {/* Top-right actions: edit + drag handle */}
+      {/* Drag handle */}
       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(task);
-          }}
-          className="p-1 text-gray-600 hover:text-blue-400 hover:bg-blue-900/20 rounded-md transition-colors"
-        >
-          <PencilIcon className="w-3 h-3" />
-        </button>
         <GripVerticalIcon className="w-3 h-3 text-gray-600" />
       </div>
 
       {/* Short ID + Title */}
-      <div className="flex items-start gap-1.5 pr-8">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onEdit(task); }}
+        className="flex items-start gap-1.5 pr-8 text-left w-full"
+      >
         {task.sequenceNumber != null && (
-          <span className="text-[10px] font-mono text-gray-500 mt-0.5 shrink-0">
+          <span className="inline-flex items-center gap-1 text-[10px] font-mono text-gray-500 mt-0.5 shrink-0">
+            <EntityIcon type="task" />
             T-{task.sequenceNumber}
           </span>
         )}
-        <p className="text-sm font-medium text-white leading-snug line-clamp-2">
+        <p className="text-sm font-medium text-white hover:text-green-400 transition-colors leading-snug line-clamp-2">
           {task.title}
         </p>
-      </div>
+      </button>
 
       {/* Metadata line: assignee, priority, tags, customer, sync */}
       <div className="flex flex-wrap items-center gap-1 mt-1">
@@ -190,13 +192,28 @@ function KanbanCard({
         )}
       </div>
 
-      {/* Delete button */}
-      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Action buttons */}
+      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+        {onRemoveFromSprint && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemoveFromSprint(task.id); }}
+            title="Remove from sprint"
+            className="p-1 text-gray-600 hover:text-amber-400 hover:bg-amber-900/20 rounded-md transition-colors"
+          >
+            <UnlinkIcon className="w-3 h-3" />
+          </button>
+        )}
+        {onConvertToStory && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onConvertToStory(task.id); }}
+            title="Convert to story"
+            className="p-1 text-gray-600 hover:text-purple-400 hover:bg-purple-900/20 rounded-md transition-colors"
+          >
+            <BookOpenIcon className="w-3 h-3" />
+          </button>
+        )}
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(task.id);
-          }}
+          onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
           className="p-1 text-gray-600 hover:text-red-400 hover:bg-red-900/20 rounded-md transition-colors"
         >
           <Trash2Icon className="w-3 h-3" />
@@ -211,12 +228,16 @@ function KanbanColumn({
   tasks,
   onDelete,
   onEdit,
+  onRemoveFromSprint,
+  onConvertToStory,
   allUsers = [],
 }: {
   column: (typeof columns)[number];
   tasks: Task[];
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  onRemoveFromSprint?: (taskId: string) => void;
+  onConvertToStory?: (taskId: string) => void;
   allUsers?: User[];
 }) {
   const { ref, isDropTarget } = useDroppable({
@@ -259,6 +280,8 @@ function KanbanColumn({
             index={index}
             onDelete={onDelete}
             onEdit={onEdit}
+            onRemoveFromSprint={onRemoveFromSprint}
+            onConvertToStory={onConvertToStory}
             allUsers={allUsers}
           />
         ))}
@@ -281,12 +304,16 @@ export function KanbanBoard({
   onStatusChange,
   onDelete,
   onEdit,
+  onRemoveFromSprint,
+  onConvertToStory,
   allUsers = [],
 }: {
   tasks: Task[];
   onStatusChange: (taskId: string, status: string) => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  onRemoveFromSprint?: (taskId: string) => void;
+  onConvertToStory?: (taskId: string) => void;
   allUsers?: User[];
 }) {
   // Group tasks by status into a record of arrays
@@ -350,6 +377,8 @@ export function KanbanBoard({
             tasks={items[column.id] ?? []}
             onDelete={onDelete}
             onEdit={onEdit}
+            onRemoveFromSprint={onRemoveFromSprint}
+            onConvertToStory={onConvertToStory}
             allUsers={allUsers}
           />
         ))}

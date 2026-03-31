@@ -3,36 +3,46 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { sprints, tasks, folders } from "@/lib/db/schema";
-import { asc, eq, count } from "drizzle-orm";
+import { asc, count, sql } from "drizzle-orm";
 import { SprintFolderList } from "@/components/features/sprint-folder-list";
 import { PlusIcon, ZapIcon } from "lucide-react";
 
 export default async function SprintsPage() {
-  const allFolders = await db
-    .select()
-    .from(folders)
-    .orderBy(asc(folders.sortOrder), asc(folders.createdAt))
-    .all();
+  // Parallel: fetch folders, sprints, and all task counts in 3 queries (not N+1)
+  const [allFolders, allSprints, allTaskCounts] = await Promise.all([
+    db
+      .select()
+      .from(folders)
+      .orderBy(asc(folders.sortOrder), asc(folders.createdAt))
+      .all(),
+    db.select().from(sprints).orderBy(asc(sprints.startDate)).all(),
+    db
+      .select({
+        sprintId: tasks.sprintId,
+        status: tasks.status,
+        count: count(),
+      })
+      .from(tasks)
+      .where(sql`${tasks.sprintId} IS NOT NULL`)
+      .groupBy(tasks.sprintId, tasks.status)
+      .all(),
+  ]);
 
-  const allSprints = await db.select().from(sprints).orderBy(asc(sprints.startDate)).all();
+  // Build a lookup: sprintId → { open, in_progress, done }
+  const countsMap = new Map<string, { open: number; in_progress: number; done: number }>();
+  for (const tc of allTaskCounts) {
+    if (!tc.sprintId) continue;
+    if (!countsMap.has(tc.sprintId)) {
+      countsMap.set(tc.sprintId, { open: 0, in_progress: 0, done: 0 });
+    }
+    const entry = countsMap.get(tc.sprintId)!;
+    entry[tc.status as keyof typeof entry] = tc.count;
+  }
 
-  const sprintsWithCounts = await Promise.all(
-    allSprints.map(async (sprint) => {
-      const taskCounts = await db
-        .select({ status: tasks.status, count: count() })
-        .from(tasks)
-        .where(eq(tasks.sprintId, sprint.id))
-        .groupBy(tasks.status)
-        .all();
-
-      const counts = { open: 0, in_progress: 0, done: 0 };
-      for (const tc of taskCounts) {
-        counts[tc.status as keyof typeof counts] = tc.count;
-      }
-
-      return { ...sprint, taskCounts: counts };
-    })
-  );
+  const sprintsWithCounts = allSprints.map((sprint) => ({
+    ...sprint,
+    taskCounts: countsMap.get(sprint.id) ?? { open: 0, in_progress: 0, done: 0 },
+  }));
 
   return (
     <div className="max-w-5xl">

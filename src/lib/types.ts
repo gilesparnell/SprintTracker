@@ -2,6 +2,14 @@
 
 export type EntityType = "story" | "task" | "subtask";
 
+export type StoryType = "user_story" | "feature_request" | "bug";
+
+export const STORY_TYPE_CONFIG: Record<StoryType, { label: string; icon: string; color: string }> = {
+  user_story: { label: "Story", icon: "BookOpenIcon", color: "text-gray-400" },
+  feature_request: { label: "Feature", icon: "SparklesIcon", color: "text-purple-400" },
+  bug: { label: "Bug", icon: "BugIcon", color: "text-red-400" },
+};
+
 export type ActionResult<T> =
   | { success: true; data: T }
   | { success: false; errors: Record<string, string[]> };

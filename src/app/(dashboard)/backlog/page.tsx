@@ -2,14 +2,16 @@ export const dynamic = "force-dynamic";
 
 import { db } from "@/lib/db";
 import { getStories } from "@/lib/actions/stories";
+import { getUnlinkedTasks } from "@/lib/actions/tasks";
 import { getActiveUsers } from "@/lib/actions/users";
 import { getAllCustomers } from "@/lib/actions/customers";
 import { sprints } from "@/lib/db/schema";
 import { asc } from "drizzle-orm";
 import { BacklogList } from "@/components/features/backlog-list";
+import { getAllProducts } from "@/lib/actions/products";
 
 export default async function BacklogPage() {
-  const [stories, users, customers, allSprints] = await Promise.all([
+  const [stories, users, customers, allSprints, unlinkedTasks, allProducts] = await Promise.all([
     getStories(db, { status: "backlog" }),
     getActiveUsers(db),
     getAllCustomers(db),
@@ -18,6 +20,8 @@ export default async function BacklogPage() {
       .from(sprints)
       .orderBy(asc(sprints.createdAt))
       .all(),
+    getUnlinkedTasks(db),
+    getAllProducts(db),
   ]);
 
   // Only show non-completed sprints for the "Move to Sprint" dropdown
@@ -37,6 +41,8 @@ export default async function BacklogPage() {
         users={users}
         customers={customers}
         sprints={activeSprints}
+        products={allProducts}
+        unlinkedTasks={unlinkedTasks}
       />
     </div>
   );

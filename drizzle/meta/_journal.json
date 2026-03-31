@@ -29,6 +29,13 @@
       "when": 1774916706269,
       "tag": "0003_round_omega_flight",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1774974336237,
+      "tag": "0004_sudden_catseye",
+      "breakpoints": true
     }
   ]
 }

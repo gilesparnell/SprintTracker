@@ -38,6 +38,7 @@ yarn-error.log*
 /data/*.db
 /data/*.db-wal
 /data/*.db-shm
+/data/backups/
 
 # vercel
 .vercel
@@ -45,3 +46,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+local.db

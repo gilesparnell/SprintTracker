@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
+import { revalidateTag } from "next/cache";
 import { db } from "@/lib/db";
 import { sprints, tasks, syncLog } from "@/lib/db/schema";
 import { eq, count, and, sql } from "drizzle-orm";
 import { deleteSprint, setSprintStatus } from "@/lib/actions/sprints";
 import { getTasksBySprintId } from "@/lib/actions/tasks";
+import { getStories } from "@/lib/actions/stories";
 import { getAllTags, getTagsForTasks } from "@/lib/actions/tags";
 import { getAllCustomers } from "@/lib/actions/customers";
 import { getActiveUsers } from "@/lib/actions/users";
@@ -11,6 +13,7 @@ import { getClickUpConfig } from "@/lib/actions/clickup-config";
 import { TaskListWrapper } from "@/components/features/task-list-wrapper";
 import { SprintClickUpLinkWrapper } from "@/components/features/sprint-clickup-link-wrapper";
 import { DeleteSprintButton } from "@/components/features/delete-sprint-button";
+import { EntityIcon } from "@/components/ui/entity-icon";
 import Link from "next/link";
 import {
   ArrowLeftIcon,
@@ -62,26 +65,47 @@ export default async function SprintDetailPage({
     notFound();
   }
 
-  const sprintTasks = await getTasksBySprintId(db, id);
-  const config = await getClickUpConfig();
-  const allTags = await getAllTags(db);
-  const allCustomers = await getAllCustomers(db);
-  const allUsers = await getActiveUsers(db);
-  const taskTagsMap = await getTagsForTasks(db, sprintTasks.map((t) => t.id));
-  const allCustomersList = await getAllCustomers(db);
-  const customerMap = Object.fromEntries(allCustomersList.map(c => [c.id, c]));
+  // Parallel fetch: all independent queries at once
+  const [sprintTasks, sprintStories, config, allTags, allCustomers, allUsers, taskCounts] = await Promise.all([
+    getTasksBySprintId(db, id),
+    getStories(db, { sprintId: id }),
+    getClickUpConfig(),
+    getAllTags(db),
+    getAllCustomers(db),
+    getActiveUsers(db),
+    db
+      .select({ status: tasks.status, count: count() })
+      .from(tasks)
+      .where(eq(tasks.sprintId, id))
+      .groupBy(tasks.status)
+      .all(),
+  ]);
+
+  // Second wave: queries that depend on sprintTasks
+  const sprintTaskIds = sprintTasks.map((t) => t.id);
+  const [taskTagsMap, syncErrorCount] = await Promise.all([
+    getTagsForTasks(db, sprintTaskIds),
+    sprintTaskIds.length > 0
+      ? db
+          .select({ count: count() })
+          .from(syncLog)
+          .where(
+            and(
+              eq(syncLog.success, 0),
+              sql`${syncLog.taskId} IN (${sql.join(sprintTaskIds.map(id => sql`${id}`), sql`, `)})`
+            )
+          )
+          .get()
+          .then((r) => r?.count ?? 0)
+      : Promise.resolve(0),
+  ]);
+
+  const customerMap = Object.fromEntries(allCustomers.map(c => [c.id, c]));
   const tasksWithTags = sprintTasks.map((t) => ({
     ...t,
     tags: taskTagsMap[t.id] ?? [],
     customer: t.customerId ? customerMap[t.customerId] ?? null : null,
   }));
-
-  const taskCounts = await db
-    .select({ status: tasks.status, count: count() })
-    .from(tasks)
-    .where(eq(tasks.sprintId, id))
-    .groupBy(tasks.status)
-    .all();
 
   const counts = { open: 0, in_progress: 0, done: 0 };
   for (const tc of taskCounts) {
@@ -92,23 +116,10 @@ export default async function SprintDetailPage({
   const progress = total > 0 ? (counts.done / total) * 100 : 0;
   const status = statusConfig[sprint.status] ?? statusConfig.planning;
 
-  const sprintTaskIds = sprintTasks.map((t) => t.id);
-  const syncErrorCount = sprintTaskIds.length > 0
-    ? (await db
-        .select({ count: count() })
-        .from(syncLog)
-        .where(
-          and(
-            eq(syncLog.success, 0),
-            sql`${syncLog.taskId} IN (${sql.join(sprintTaskIds.map(id => sql`${id}`), sql`, `)})`
-          )
-        )
-        .get())?.count ?? 0
-    : 0;
-
   async function handleDelete() {
     "use server";
     await deleteSprint(db, id);
+    revalidateTag("sidebar", "seconds");
     redirect("/sprints");
   }
 
@@ -270,6 +281,38 @@ export default async function SprintDetailPage({
           </div>
         )}
       </div>
+
+      {/* Stories */}
+      {sprintStories.length > 0 && (
+        <div className="mb-3">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Stories</h3>
+          <div className="flex flex-col gap-1">
+            {sprintStories.map((story) => (
+              <Link
+                key={story.id}
+                href={`/stories/${story.id}`}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-800 bg-gray-900 hover:border-gray-700 hover:bg-gray-800/50 transition-colors group"
+              >
+                <EntityIcon type="story" className="w-3.5 h-3.5 shrink-0" />
+                <span className="text-[11px] font-mono text-gray-500">S-{story.sequenceNumber}</span>
+                <span className="text-xs text-gray-300 truncate group-hover:text-white transition-colors">{story.title}</span>
+                <span
+                  className={`ml-auto shrink-0 inline-flex items-center px-1.5 py-0.5 text-[10px] rounded-full border ${
+                    story.status === "done"
+                      ? "bg-green-900/20 text-green-400 border-green-500/30"
+                      : story.status === "in_sprint"
+                        ? "bg-blue-900/20 text-blue-400 border-blue-500/30"
+                        : "bg-gray-800 text-gray-400 border-gray-700"
+                  }`}
+                >
+                  {story.status === "in_sprint" ? "In Sprint" : story.status === "done" ? "Done" : "Backlog"}
+                </span>
+                <span className="shrink-0 text-[10px] text-gray-600">{story.taskCount} {story.taskCount === 1 ? "task" : "tasks"}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tasks */}
       <div>

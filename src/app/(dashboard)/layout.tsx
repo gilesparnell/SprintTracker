@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import Link from "next/link";
 import {
   FolderIcon,
@@ -8,6 +6,7 @@ import {
   SettingsIcon,
   ZapIcon,
 } from "lucide-react";
+import { SidebarNavLink } from "@/components/features/sidebar-nav-link";
 import { LoveNotes } from "@/components/features/love-notes";
 import { MobileSidebarContent } from "@/components/features/mobile-sidebar";
 import { UserMenu } from "@/components/features/user-menu";
@@ -16,6 +15,39 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { sprints, folders, userStories } from "@/lib/db/schema";
 import { asc, desc, eq, sql } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
+
+// Cache sidebar data for 30s — avoids re-querying on every navigation
+const getSidebarData = unstable_cache(
+  async () => {
+    const [allFolders, allSprints, backlogCountResult] = await Promise.all([
+      db
+        .select({ id: folders.id, name: folders.name })
+        .from(folders)
+        .orderBy(asc(folders.sortOrder), asc(folders.createdAt))
+        .all(),
+      db
+        .select({ id: sprints.id, name: sprints.name, status: sprints.status, folderId: sprints.folderId })
+        .from(sprints)
+        .orderBy(desc(sprints.createdAt))
+        .all(),
+      db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(userStories)
+        .where(eq(userStories.status, "backlog"))
+        .get(),
+    ]);
+
+    return {
+      allFolders,
+      activeSprints: allSprints.filter((s) => s.status !== "completed"),
+      completedSprints: allSprints.filter((s) => s.status === "completed"),
+      backlogCount: backlogCountResult?.count ?? 0,
+    };
+  },
+  ["sidebar-data"],
+  { revalidate: 30, tags: ["sidebar"] }
+);
 
 function SidebarNav({
   allFolders,
@@ -45,9 +77,12 @@ function SidebarNav({
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1">
-        <Link
+        <SidebarNavLink
           href="/backlog"
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-gray-200 transition-all"
+          matchPrefixes={["/backlog", "/stories"]}
+          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+          activeClassName="bg-green-500/10 text-green-400 border border-green-500/30"
+          inactiveClassName="text-gray-400 hover:bg-gray-800 hover:text-gray-200"
         >
           <ListIcon className="w-4 h-4" />
           Backlog
@@ -56,15 +91,18 @@ function SidebarNav({
               {backlogCount}
             </span>
           )}
-        </Link>
-        <Link
+        </SidebarNavLink>
+        <SidebarNavLink
           href="/sprints"
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium bg-green-500/10 text-green-400 border border-green-500/30 transition-all"
+          matchPrefixes={["/sprints", "/tasks"]}
+          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+          activeClassName="bg-green-500/10 text-green-400 border border-green-500/30"
+          inactiveClassName="text-gray-400 hover:bg-gray-800 hover:text-gray-200"
         >
           <LayoutDashboardIcon className="w-4 h-4" />
           Sprints
           <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-400" />
-        </Link>
+        </SidebarNavLink>
         {(activeSprints.length > 0 || allFolders.length > 0) && (
           <div className="ml-4 pl-3 border-l border-gray-800 space-y-0.5 py-1">
             {allFolders.map((folder) => {
@@ -117,20 +155,24 @@ function SidebarNav({
             ))}
           </div>
         )}
-        <Link
+        <SidebarNavLink
           href="/settings"
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-gray-200 transition-all"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+          activeClassName="bg-green-500/10 text-green-400 border border-green-500/30"
+          inactiveClassName="text-gray-400 hover:bg-gray-800 hover:text-gray-200"
         >
           <SettingsIcon className="w-4 h-4" />
           Settings
-        </Link>
-        <Link
+        </SidebarNavLink>
+        <SidebarNavLink
           href="/admin"
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-gray-200 transition-all"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+          activeClassName="bg-green-500/10 text-green-400 border border-green-500/30"
+          inactiveClassName="text-gray-400 hover:bg-gray-800 hover:text-gray-200"
         >
           <SettingsIcon className="w-4 h-4" />
           Admin
-        </Link>
+        </SidebarNavLink>
       </nav>
 
       {/* Love Notes */}
@@ -154,36 +196,17 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-
-  const allFolders = await db
-    .select({ id: folders.id, name: folders.name })
-    .from(folders)
-    .orderBy(asc(folders.sortOrder), asc(folders.createdAt))
-    .all();
-
-  const allSprints = await db
-    .select({ id: sprints.id, name: sprints.name, status: sprints.status, folderId: sprints.folderId })
-    .from(sprints)
-    .orderBy(desc(sprints.createdAt))
-    .all();
-
-  const activeSprints = allSprints.filter((s) => s.status !== "completed");
-  const completedSprints = allSprints.filter((s) => s.status === "completed");
-
-  const backlogCountResult = await db
-    .select({ count: sql<number>`COUNT(*)` })
-    .from(userStories)
-    .where(eq(userStories.status, "backlog"))
-    .get();
-  const backlogCount = backlogCountResult?.count ?? 0;
+  const [session, sidebarData] = await Promise.all([
+    auth(),
+    getSidebarData(),
+  ]);
 
   const sidebarContent = (
     <SidebarNav
-      allFolders={allFolders}
-      activeSprints={activeSprints}
-      completedSprints={completedSprints}
-      backlogCount={backlogCount}
+      allFolders={sidebarData.allFolders}
+      activeSprints={sidebarData.activeSprints}
+      completedSprints={sidebarData.completedSprints}
+      backlogCount={sidebarData.backlogCount}
     />
   );
 

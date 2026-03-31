@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:snapshot": "bash scripts/snapshot-prod.sh"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",

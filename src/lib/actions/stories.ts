@@ -1,7 +1,7 @@
 "use server";
 
 import { eq, sql, and, desc, asc } from "drizzle-orm";
-import { userStories, tasks, notes, notifications } from "@/lib/db/schema";
+import { userStories, tasks, subTasks, notes, notifications } from "@/lib/db/schema";
 import {
   createStorySchema,
   updateStorySchema,
@@ -13,6 +13,7 @@ import type { DB } from "@/lib/db/types";
 import type { ActionResult } from "@/lib/types";
 import { parseZodErrors } from "@/lib/helpers/zod-errors";
 import { getNextSequenceNumber } from "@/lib/helpers/sequence";
+import { triggerNotification } from "@/lib/helpers/notify";
 
 type Story = typeof userStories.$inferSelect;
 
@@ -32,10 +33,14 @@ export async function createStory(
   const now = new Date().toISOString();
   const sequenceNumber = await getNextSequenceNumber(db, "story");
 
-  // Get max sort order and add gap
+  // Get max sort order within same product and add gap
+  const sortConditions = parsed.data.productId
+    ? and(eq(userStories.status, "backlog"), eq(userStories.productId, parsed.data.productId))
+    : eq(userStories.status, "backlog");
   const maxSort = await db
     .select({ max: sql<number>`COALESCE(MAX(${userStories.sortOrder}), 0)` })
     .from(userStories)
+    .where(sortConditions)
     .get();
   const sortOrder = (maxSort?.max ?? 0) + 1000;
 
@@ -44,9 +49,11 @@ export async function createStory(
     sequenceNumber,
     title: parsed.data.title,
     description: parsed.data.description ?? null,
+    type: parsed.data.type,
     priority: parsed.data.priority,
-    status: "backlog",
+    status: parsed.data.status,
     sortOrder,
+    productId: parsed.data.productId,
     assignedTo: parsed.data.assignedTo ?? null,
     createdBy: userId,
     customerId: parsed.data.customerId ?? null,
@@ -59,6 +66,18 @@ export async function createStory(
     .from(userStories)
     .where(eq(userStories.id, id))
     .get();
+
+  // Notify assignee on creation
+  if (story?.assignedTo && story.assignedTo !== userId) {
+    void triggerNotification(db, {
+      type: "assignment",
+      actorId: userId,
+      targetUserId: story.assignedTo,
+      entityType: "story",
+      entityId: id,
+      title: `You were assigned to S-${sequenceNumber}: ${parsed.data.title}`,
+    });
+  }
 
   return { success: true, data: story! };
 }
@@ -74,6 +93,12 @@ export async function updateStory(
     return { success: false, errors: parseZodErrors(parsed.error) };
   }
 
+  const oldStory = await db
+    .select()
+    .from(userStories)
+    .where(eq(userStories.id, id))
+    .get();
+
   const updateValues: Record<string, unknown> = {
     title: parsed.data.title,
     description: parsed.data.description ?? null,
@@ -81,8 +106,14 @@ export async function updateStory(
     updatedAt: new Date().toISOString(),
   };
 
+  if (parsed.data.type !== undefined) {
+    updateValues.type = parsed.data.type;
+  }
   if (parsed.data.status !== undefined) {
     updateValues.status = parsed.data.status;
+  }
+  if (parsed.data.productId !== undefined) {
+    updateValues.productId = parsed.data.productId || null;
   }
   if (parsed.data.assignedTo !== undefined) {
     updateValues.assignedTo = parsed.data.assignedTo || null;
@@ -102,24 +133,79 @@ export async function updateStory(
     .where(eq(userStories.id, id))
     .get();
 
+  // Notify on (re)assignment change
+  if (story && userId && story.assignedTo && story.assignedTo !== oldStory?.assignedTo) {
+    const isNew = !oldStory?.assignedTo;
+    void triggerNotification(db, {
+      type: isNew ? "assignment" : "reassignment",
+      actorId: userId,
+      targetUserId: story.assignedTo,
+      entityType: "story",
+      entityId: id,
+      title: `You were ${isNew ? "assigned to" : "reassigned"} S-${story.sequenceNumber}: ${story.title}`,
+    });
+  }
+
   return { success: true, data: story! };
 }
+
+export type DeleteStoryMode = "cascade" | "unlink" | "reassign";
 
 export async function deleteStory(
   db: DB,
   userId: string,
-  id: string
+  id: string,
+  mode: DeleteStoryMode = "unlink",
+  reassignStoryId?: string
 ): Promise<ActionResult<{ deleted: true }>> {
-  // Application-level cascade for polymorphic tables
-  await db
-    .delete(notes)
-    .where(and(eq(notes.entityType, "story"), eq(notes.entityId, id)));
-  await db
-    .delete(notifications)
-    .where(
-      and(eq(notifications.entityType, "story"), eq(notifications.entityId, id))
-    );
+  // Get child tasks for this story
+  const childTasks = await db
+    .select({ id: tasks.id })
+    .from(tasks)
+    .where(eq(tasks.userStoryId, id))
+    .all();
 
+  if (mode === "cascade") {
+    // Delete all child tasks, their subtasks, notes, and notifications
+    for (const task of childTasks) {
+      // Clean up subtask polymorphic data
+      const childSubTasks = await db
+        .select({ id: subTasks.id })
+        .from(subTasks)
+        .where(eq(subTasks.parentTaskId, task.id))
+        .all();
+
+      for (const st of childSubTasks) {
+        await db.delete(notes).where(and(eq(notes.entityType, "subtask"), eq(notes.entityId, st.id)));
+        await db.delete(notifications).where(and(eq(notifications.entityType, "subtask"), eq(notifications.entityId, st.id)));
+      }
+
+      // Clean up task polymorphic data
+      await db.delete(notes).where(and(eq(notes.entityType, "task"), eq(notes.entityId, task.id)));
+      await db.delete(notifications).where(and(eq(notifications.entityType, "task"), eq(notifications.entityId, task.id)));
+
+      // Delete task (subtasks + taskTags cascade via FK)
+      await db.delete(tasks).where(eq(tasks.id, task.id));
+    }
+  } else if (mode === "reassign" && reassignStoryId) {
+    // Move all tasks to a different story
+    await db
+      .update(tasks)
+      .set({ userStoryId: reassignStoryId, updatedAt: new Date().toISOString() })
+      .where(eq(tasks.userStoryId, id));
+  } else {
+    // mode === "unlink": detach tasks (set userStoryId to null)
+    await db
+      .update(tasks)
+      .set({ userStoryId: null, updatedAt: new Date().toISOString() })
+      .where(eq(tasks.userStoryId, id));
+  }
+
+  // Clean up story's own polymorphic data
+  await db.delete(notes).where(and(eq(notes.entityType, "story"), eq(notes.entityId, id)));
+  await db.delete(notifications).where(and(eq(notifications.entityType, "story"), eq(notifications.entityId, id)));
+
+  // Delete the story
   await db.delete(userStories).where(eq(userStories.id, id));
   return { success: true, data: { deleted: true } };
 }
@@ -130,6 +216,9 @@ export async function getStories(
     status?: string;
     assignedTo?: string;
     customerId?: string;
+    sprintId?: string;
+    productId?: string;
+    type?: string;
   }
 ): Promise<StoryWithTaskCount[]> {
   // Build WHERE conditions
@@ -143,6 +232,15 @@ export async function getStories(
   if (filters?.customerId) {
     conditions.push(eq(userStories.customerId, filters.customerId));
   }
+  if (filters?.sprintId) {
+    conditions.push(eq(userStories.sprintId, filters.sprintId));
+  }
+  if (filters?.productId) {
+    conditions.push(eq(userStories.productId, filters.productId));
+  }
+  if (filters?.type) {
+    conditions.push(eq(userStories.type, filters.type as "user_story" | "feature_request" | "bug"));
+  }
 
   const whereClause =
     conditions.length > 0 ? and(...conditions) : undefined;
@@ -153,9 +251,11 @@ export async function getStories(
       sequenceNumber: userStories.sequenceNumber,
       title: userStories.title,
       description: userStories.description,
+      type: userStories.type,
       priority: userStories.priority,
       status: userStories.status,
       sortOrder: userStories.sortOrder,
+      productId: userStories.productId,
       assignedTo: userStories.assignedTo,
       createdBy: userStories.createdBy,
       sprintId: userStories.sprintId,
@@ -263,11 +363,17 @@ export async function reorderStory(
   storyId: string,
   newSortOrder: number
 ): Promise<ActionResult<{ reindexed: boolean }>> {
-  // Check if gap is too small (< 1) — if so, re-index all backlog stories
+  // Scope re-indexing to same product
+  const story = await db.select({ productId: userStories.productId }).from(userStories).where(eq(userStories.id, storyId)).get();
+  const productConditions = [eq(userStories.status, "backlog")];
+  if (story?.productId) {
+    productConditions.push(eq(userStories.productId, story.productId));
+  }
+
   const stories = await db
     .select({ id: userStories.id, sortOrder: userStories.sortOrder })
     .from(userStories)
-    .where(eq(userStories.status, "backlog"))
+    .where(and(...productConditions))
     .orderBy(asc(userStories.sortOrder))
     .all();
 

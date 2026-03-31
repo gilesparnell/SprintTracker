@@ -1,7 +1,7 @@
 "use server";
 
 import { eq, sql, and } from "drizzle-orm";
-import { tasks, notes, notifications, subTasks } from "@/lib/db/schema";
+import { tasks, notes, notifications, subTasks, userStories } from "@/lib/db/schema";
 import { taskSchema, type TaskInput } from "@/lib/validators/task";
 import { v4 as uuid } from "uuid";
 import type { DB } from "@/lib/db/types";
@@ -62,6 +62,28 @@ export async function createTask(
   }
 
   return { success: true, task };
+}
+
+export async function getUnlinkedTasks(db: DB) {
+  // Tasks that have no parent story — split into two groups:
+  // 1. Truly orphaned (no story AND no sprint) → shown in backlog
+  // 2. Sprint-only (no story but in a sprint) → shown in sprint view, not here
+  return db
+    .select({
+      id: tasks.id,
+      sequenceNumber: tasks.sequenceNumber,
+      title: tasks.title,
+      status: tasks.status,
+      priority: tasks.priority,
+      assignedTo: tasks.assignedTo,
+    })
+    .from(tasks)
+    .leftJoin(userStories, eq(tasks.userStoryId, userStories.id))
+    .where(
+      sql`(${tasks.userStoryId} IS NULL OR ${userStories.id} IS NULL) AND ${tasks.sprintId} IS NULL`
+    )
+    .orderBy(tasks.createdAt)
+    .all();
 }
 
 export async function getTasksBySprintId(db: DB, sprintId: string) {
@@ -203,4 +225,91 @@ export async function deleteTask(
   // Delete task (subtasks cascade via FK)
   await db.delete(tasks).where(eq(tasks.id, id));
   return { success: true };
+}
+
+export async function removeTaskFromSprint(
+  db: DB,
+  id: string
+): Promise<{ success: boolean }> {
+  await db
+    .update(tasks)
+    .set({ sprintId: null, updatedAt: new Date().toISOString() })
+    .where(eq(tasks.id, id));
+  return { success: true };
+}
+
+const taskToStoryStatusMap: Record<string, string> = {
+  open: "backlog",
+  in_progress: "in_sprint",
+  done: "done",
+};
+
+export async function convertTaskToStory(
+  db: DB,
+  taskId: string,
+  userId: string
+): Promise<{ success: boolean; storyId?: string }> {
+  const task = await db.select().from(tasks).where(eq(tasks.id, taskId)).get();
+  if (!task) return { success: false };
+
+  const storyId = uuid();
+  const now = new Date().toISOString();
+  const sequenceNumber = await getNextSequenceNumber(db, "story");
+
+  // Get max sort order for new story
+  const maxSort = await db
+    .select({ max: sql<number>`COALESCE(MAX(${userStories.sortOrder}), 0)` })
+    .from(userStories)
+    .get();
+  const sortOrder = (maxSort?.max ?? 0) + 1000;
+
+  // Create story from task fields
+  await db.insert(userStories).values({
+    id: storyId,
+    sequenceNumber,
+    title: task.title,
+    description: task.description,
+    priority: task.priority as "low" | "medium" | "high" | "urgent",
+    status: (taskToStoryStatusMap[task.status] ?? "backlog") as "backlog" | "in_sprint" | "done",
+    sortOrder,
+    assignedTo: task.assignedTo,
+    createdBy: userId,
+    sprintId: task.sprintId,
+    customerId: task.customerId,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  // Re-parent task notes → story notes
+  await db
+    .update(notes)
+    .set({ entityType: "story", entityId: storyId })
+    .where(and(eq(notes.entityType, "task"), eq(notes.entityId, taskId)));
+
+  // Re-parent task notifications → story notifications
+  await db
+    .update(notifications)
+    .set({ entityType: "story", entityId: storyId })
+    .where(and(eq(notifications.entityType, "task"), eq(notifications.entityId, taskId)));
+
+  // Delete subtask notes and notifications
+  const childSubTasks = await db
+    .select({ id: subTasks.id })
+    .from(subTasks)
+    .where(eq(subTasks.parentTaskId, taskId))
+    .all();
+
+  for (const st of childSubTasks) {
+    await db
+      .delete(notes)
+      .where(and(eq(notes.entityType, "subtask"), eq(notes.entityId, st.id)));
+    await db
+      .delete(notifications)
+      .where(and(eq(notifications.entityType, "subtask"), eq(notifications.entityId, st.id)));
+  }
+
+  // Delete the original task (subtasks cascade via FK)
+  await db.delete(tasks).where(eq(tasks.id, taskId));
+
+  return { success: true, storyId };
 }

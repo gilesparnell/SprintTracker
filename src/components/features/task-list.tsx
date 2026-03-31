@@ -2,11 +2,12 @@
 
 import { TaskStatusSelect } from "./task-status-select";
 import {
-  CheckCircle2Icon,
+  BookOpenIcon,
   ListTodoIcon,
-  PencilIcon,
   Trash2Icon,
+  UnlinkIcon,
 } from "lucide-react";
+import { EntityIcon } from "@/components/ui/entity-icon";
 
 type Tag = {
   id: string;
@@ -69,12 +70,16 @@ function MobileTaskCard({
   onStatusChange,
   onDelete,
   onEdit,
+  onRemoveFromSprint,
+  onConvertToStory,
   allUsers = [],
 }: {
   task: Task;
   onStatusChange: (taskId: string, status: string) => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  onRemoveFromSprint?: (taskId: string) => void;
+  onConvertToStory?: (taskId: string) => void;
   allUsers?: User[];
 }) {
   const priority = priorityConfig[task.priority] ?? priorityConfig.medium;
@@ -84,12 +89,17 @@ function MobileTaskCard({
       {/* Title — full width */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-white">
-            {task.sequenceNumber != null && (
-              <span className="text-[10px] font-mono text-gray-500 mr-1.5">T-{task.sequenceNumber}</span>
-            )}
-            {task.title}
-          </p>
+          <button type="button" onClick={() => onEdit(task)} className="text-left">
+            <p className="text-sm font-medium text-white hover:text-green-400 transition-colors">
+              {task.sequenceNumber != null && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-gray-500 mr-1.5">
+                  <EntityIcon type="task" />
+                  T-{task.sequenceNumber}
+                </span>
+              )}
+              {task.title}
+            </p>
+          </button>
           {task.description && (
             <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
               {task.description}
@@ -97,12 +107,24 @@ function MobileTaskCard({
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => onEdit(task)}
-            className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <PencilIcon className="w-4 h-4" />
-          </button>
+          {onRemoveFromSprint && (
+            <button
+              onClick={() => onRemoveFromSprint(task.id)}
+              title="Remove from sprint"
+              className="p-1.5 text-gray-500 hover:text-amber-400 hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <UnlinkIcon className="w-4 h-4" />
+            </button>
+          )}
+          {onConvertToStory && (
+            <button
+              onClick={() => onConvertToStory(task.id)}
+              title="Convert to story"
+              className="p-1.5 text-gray-500 hover:text-purple-400 hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <BookOpenIcon className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={() => onDelete(task.id)}
             className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors"
@@ -124,12 +146,6 @@ function MobileTaskCard({
         >
           {priority.label}
         </span>
-        {task.clickupTaskId && (
-          <span className="inline-flex items-center gap-1 text-xs text-green-400">
-            <CheckCircle2Icon className="w-3 h-3" />
-            Synced
-          </span>
-        )}
         {task.tags.map((tag) => (
           <span
             key={tag.id}
@@ -158,12 +174,16 @@ export function TaskList({
   onStatusChange,
   onDelete,
   onEdit,
+  onRemoveFromSprint,
+  onConvertToStory,
   allUsers = [],
 }: {
   tasks: Task[];
   onStatusChange: (taskId: string, status: string) => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  onRemoveFromSprint?: (taskId: string) => void;
+  onConvertToStory?: (taskId: string) => void;
   allUsers?: User[];
 }) {
   if (tasks.length === 0) {
@@ -190,6 +210,8 @@ export function TaskList({
             onStatusChange={onStatusChange}
             onDelete={onDelete}
             onEdit={onEdit}
+            onRemoveFromSprint={onRemoveFromSprint}
+            onConvertToStory={onConvertToStory}
             allUsers={allUsers}
           />
         ))}
@@ -218,9 +240,6 @@ export function TaskList({
               <th className="px-6 py-4 text-sm font-medium text-gray-400">
                 Customer
               </th>
-              <th className="px-6 py-4 text-sm font-medium text-gray-400">
-                Sync
-              </th>
               <th className="px-6 py-4 text-sm font-medium text-gray-400 text-right">
                 Actions
               </th>
@@ -236,12 +255,17 @@ export function TaskList({
                 >
                   <td className="px-6 py-4">
                     <div>
-                      <span className="text-sm font-medium text-white">
-                        {task.sequenceNumber != null && (
-                          <span className="text-[10px] font-mono text-gray-500 mr-1.5">T-{task.sequenceNumber}</span>
-                        )}
-                        {task.title}
-                      </span>
+                      <button type="button" onClick={() => onEdit(task)} className="text-left">
+                        <span className="text-sm font-medium text-white hover:text-green-400 transition-colors">
+                          {task.sequenceNumber != null && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono text-gray-500 mr-1.5">
+                              <EntityIcon type="task" />
+                              T-{task.sequenceNumber}
+                            </span>
+                          )}
+                          {task.title}
+                        </span>
+                      </button>
                       {task.description && (
                         <p className="text-xs text-gray-500 truncate max-w-md mt-0.5">
                           {task.description}
@@ -311,24 +335,26 @@ export function TaskList({
                       <span className="text-xs text-gray-600">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
-                    {task.clickupTaskId ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-green-400">
-                        <CheckCircle2Icon className="w-3.5 h-3.5" />
-                        Synced
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-600">—</span>
-                    )}
-                  </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => onEdit(task)}
-                        className="p-2 text-gray-500 hover:text-blue-400 hover:bg-gray-800 rounded-lg transition-colors"
-                      >
-                        <PencilIcon className="w-4 h-4" />
-                      </button>
+                      {onRemoveFromSprint && (
+                        <button
+                          onClick={() => onRemoveFromSprint(task.id)}
+                          title="Remove from sprint"
+                          className="p-2 text-gray-500 hover:text-amber-400 hover:bg-gray-800 rounded-lg transition-colors"
+                        >
+                          <UnlinkIcon className="w-4 h-4" />
+                        </button>
+                      )}
+                      {onConvertToStory && (
+                        <button
+                          onClick={() => onConvertToStory(task.id)}
+                          title="Convert to story"
+                          className="p-2 text-gray-500 hover:text-purple-400 hover:bg-gray-800 rounded-lg transition-colors"
+                        >
+                          <BookOpenIcon className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => onDelete(task.id)}
                         className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors"

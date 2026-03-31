@@ -9,7 +9,9 @@ import {
 } from "lucide-react";
 import { LoveNotes } from "@/components/features/love-notes";
 import { MobileSidebarContent } from "@/components/features/mobile-sidebar";
+import { UserMenu } from "@/components/features/user-menu";
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { sprints, folders } from "@/lib/db/schema";
 import { asc, desc } from "drizzle-orm";
 
@@ -129,6 +131,8 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+
   const allFolders = await db
     .select({ id: folders.id, name: folders.name })
     .from(folders)
@@ -166,6 +170,10 @@ export default async function DashboardLayout({
 
       {/* Main */}
       <main className="flex-1 overflow-auto pt-14 md:pt-0">
+        {/* Header bar with user menu */}
+        <div className="hidden md:flex items-center justify-end px-8 py-3 border-b border-gray-800">
+          {session?.user && <UserMenu user={session.user} />}
+        </div>
         <div className="p-4 md:p-8">{children}</div>
       </main>
     </div>

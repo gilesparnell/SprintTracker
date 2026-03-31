@@ -10,9 +10,6 @@ import { NotesList } from "@/components/features/notes-list";
 import Link from "next/link";
 import {
   ArrowLeftIcon,
-  CheckCircle2Icon,
-  CircleDotIcon,
-  ClockIcon,
   UserIcon,
   AlertTriangleIcon,
   ListTodoIcon,

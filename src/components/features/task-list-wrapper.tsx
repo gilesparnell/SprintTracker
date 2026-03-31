@@ -299,6 +299,7 @@ export function TaskListWrapper({
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}
           onEdit={setEditingTask}
+          allUsers={allUsers}
         />
       )}
 

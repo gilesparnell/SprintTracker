@@ -14,12 +14,21 @@ type Tag = {
   color: string;
 };
 
+type User = {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+};
+
 type Task = {
   id: string;
+  sequenceNumber?: number | null;
   title: string;
   description: string | null;
   status: string;
   priority: string;
+  assignedTo?: string | null;
   clickupTaskId: string | null;
   tags: Tag[];
   customer: { id: string; name: string; color: string } | null;
@@ -60,11 +69,13 @@ function MobileTaskCard({
   onStatusChange,
   onDelete,
   onEdit,
+  allUsers = [],
 }: {
   task: Task;
   onStatusChange: (taskId: string, status: string) => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  allUsers?: User[];
 }) {
   const priority = priorityConfig[task.priority] ?? priorityConfig.medium;
 
@@ -73,7 +84,12 @@ function MobileTaskCard({
       {/* Title — full width */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-white">{task.title}</p>
+          <p className="text-sm font-medium text-white">
+            {task.sequenceNumber != null && (
+              <span className="text-[10px] font-mono text-gray-500 mr-1.5">T-{task.sequenceNumber}</span>
+            )}
+            {task.title}
+          </p>
           {task.description && (
             <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
               {task.description}
@@ -142,11 +158,13 @@ export function TaskList({
   onStatusChange,
   onDelete,
   onEdit,
+  allUsers = [],
 }: {
   tasks: Task[];
   onStatusChange: (taskId: string, status: string) => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  allUsers?: User[];
 }) {
   if (tasks.length === 0) {
     return (
@@ -172,6 +190,7 @@ export function TaskList({
             onStatusChange={onStatusChange}
             onDelete={onDelete}
             onEdit={onEdit}
+            allUsers={allUsers}
           />
         ))}
       </div>
@@ -183,6 +202,9 @@ export function TaskList({
             <tr className="border-b border-gray-800 text-left">
               <th className="px-6 py-4 text-sm font-medium text-gray-400">
                 Title
+              </th>
+              <th className="px-6 py-4 text-sm font-medium text-gray-400">
+                Assignee
               </th>
               <th className="px-6 py-4 text-sm font-medium text-gray-400">
                 Status
@@ -215,6 +237,9 @@ export function TaskList({
                   <td className="px-6 py-4">
                     <div>
                       <span className="text-sm font-medium text-white">
+                        {task.sequenceNumber != null && (
+                          <span className="text-[10px] font-mono text-gray-500 mr-1.5">T-{task.sequenceNumber}</span>
+                        )}
                         {task.title}
                       </span>
                       {task.description && (
@@ -223,6 +248,25 @@ export function TaskList({
                         </p>
                       )}
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {(() => {
+                      if (!task.assignedTo) return <span className="text-xs text-gray-600">—</span>;
+                      const user = allUsers.find((u) => u.id === task.assignedTo);
+                      if (!user) return <span className="text-xs text-gray-600">—</span>;
+                      return (
+                        <span className="inline-flex items-center gap-1.5 text-xs text-gray-300">
+                          {user.image ? (
+                            <img src={user.image} alt="" className="w-5 h-5 rounded-full" />
+                          ) : (
+                            <span className="w-5 h-5 rounded-full bg-gray-600 flex items-center justify-center text-[9px] text-white font-bold">
+                              {(user.name ?? user.email).charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                          {user.name ?? user.email}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4">
                     <TaskStatusSelect

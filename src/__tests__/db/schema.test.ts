@@ -3,7 +3,7 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { eq, sql } from "drizzle-orm";
-import { sprints, tasks, clickupConfig, syncLog } from "@/lib/db/schema";
+import { sprints, tasks, clickupConfig, syncLog, users, allowedEmails, sequences, userStories, subTasks, notes, notifications, folders, customers, tags, taskTags } from "@/lib/db/schema";
 import { v4 as uuid } from "uuid";
 
 describe("Database Schema", () => {
@@ -21,7 +21,11 @@ describe("Database Schema", () => {
     );
     const tableNames = tables.map((t) => t.name).sort();
     expect(tableNames).toEqual(
-      ["clickup_config", "sprints", "sync_log", "tasks"].sort()
+      [
+        "allowed_emails", "clickup_config", "customers", "folders",
+        "notes", "notifications", "sequences", "sprints", "sub_tasks",
+        "sync_log", "tags", "task_tags", "tasks", "user_stories", "users",
+      ].sort()
     );
   });
 

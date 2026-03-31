@@ -1,4 +1,4 @@
-import { resend } from "./client";
+import { getResend } from "./client";
 
 type NotificationType = "assignment" | "reassignment" | "note";
 
@@ -73,7 +73,7 @@ export async function sendNotificationEmail(
   const subject = buildSubject(type, context);
   const html = buildHtml(type, recipient, context);
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from,
     to: recipient.email,
     subject,

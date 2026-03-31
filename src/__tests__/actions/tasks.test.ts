@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, beforeAll } from "vitest";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { migrate } from "drizzle-orm/libsql/migrator";
-import { sprints, tasks } from "@/lib/db/schema";
+import { sprints, tasks, sequences, notes, notifications, subTasks } from "@/lib/db/schema";
 import { createSprint } from "@/lib/actions/sprints";
 import {
   createTask,
@@ -23,8 +23,13 @@ describe("Task Actions", () => {
   });
 
   beforeEach(async () => {
+    await db.delete(notifications);
+    await db.delete(notes);
+    await db.delete(subTasks);
     await db.delete(tasks);
     await db.delete(sprints);
+    // Reset sequence counters
+    await db.update(sequences).set({ value: 0 });
 
     const result = await createSprint(db, {
       name: "Test Sprint",

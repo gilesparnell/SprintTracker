@@ -3,7 +3,7 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { eq } from "drizzle-orm";
-import { sprints, tasks } from "@/lib/db/schema";
+import { sprints, tasks, sequences, notes, notifications, subTasks } from "@/lib/db/schema";
 import { v4 as uuid } from "uuid";
 import {
   createSprint,
@@ -23,8 +23,12 @@ describe("Sprint Actions", () => {
   });
 
   beforeEach(async () => {
+    await db.delete(notifications);
+    await db.delete(notes);
+    await db.delete(subTasks);
     await db.delete(tasks);
     await db.delete(sprints);
+    await db.update(sequences).set({ value: 0 });
   });
 
   it("should create a sprint with valid data", async () => {

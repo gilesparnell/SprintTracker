@@ -17,7 +17,7 @@ export async function POST(
   if (!authResult.authenticated) return authResult.response;
 
   const { id: sprintId } = await params;
-  const { title, description, status, priority, customerId, tagIds } =
+  const { title, description, status, priority, customerId, assignedTo, tagIds } =
     await request.json();
 
   const result = await createTask(db, sprintId, {
@@ -27,7 +27,9 @@ export async function POST(
     priority: priority || "medium",
     customerId:
       customerId && customerId !== "__none__" ? customerId : undefined,
-  });
+    assignedTo:
+      assignedTo && assignedTo !== "__none__" ? assignedTo : undefined,
+  }, authResult.userId);
 
   if (!result.success) {
     return NextResponse.json(result);

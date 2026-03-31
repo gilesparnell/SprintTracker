@@ -23,7 +23,7 @@ export async function PATCH(
   if (!authResult.authenticated) return authResult.response;
 
   const { id } = await params;
-  const { title, description, status, priority, customerId } = await request.json();
-  const result = await updateTask(db, id, { title, description, status, priority, customerId });
+  const { title, description, status, priority, customerId, assignedTo } = await request.json();
+  const result = await updateTask(db, id, { title, description, status, priority, customerId, assignedTo }, authResult.userId);
   return NextResponse.json(result);
 }

@@ -29,6 +29,13 @@ type Customer = {
   color: string;
 };
 
+type User = {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+};
+
 type FormState = {
   success: boolean;
   errors?: Record<string, string[]>;
@@ -195,6 +202,7 @@ export function TaskFormDialog({
   defaultValues,
   allTags = [],
   allCustomers = [],
+  allUsers = [],
   open: controlledOpen,
   onOpenChange,
 }: {
@@ -208,9 +216,11 @@ export function TaskFormDialog({
     priority?: string;
     tagIds?: string[];
     customerId?: string;
+    assignedTo?: string;
   };
   allTags?: Tag[];
   allCustomers?: Customer[];
+  allUsers?: User[];
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
@@ -223,19 +233,22 @@ export function TaskFormDialog({
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
     defaultValues?.customerId ?? "__none__"
   );
+  const [selectedAssignedTo, setSelectedAssignedTo] = useState<string>(
+    defaultValues?.assignedTo ?? "__none__"
+  );
 
-  // Reset tag/customer selection when dialogue opens or a different task is edited.
-  // Serialise tagIds to a string so the dependency is stable across renders
-  // (defaultValues.tagIds is a new array reference each render).
+  // Reset tag/customer/assignee selection when dialogue opens or a different task is edited.
   const tagIdsKey = (defaultValues?.tagIds ?? []).join(",");
   const customerIdKey = defaultValues?.customerId ?? "__none__";
+  const assignedToKey = defaultValues?.assignedTo ?? "__none__";
   useEffect(() => {
     if (dialogOpen) {
       setSelectedTagIds(defaultValues?.tagIds ?? []);
       setSelectedCustomerId(defaultValues?.customerId ?? "__none__");
+      setSelectedAssignedTo(defaultValues?.assignedTo ?? "__none__");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dialogOpen, tagIdsKey, customerIdKey]);
+  }, [dialogOpen, tagIdsKey, customerIdKey, assignedToKey]);
 
   function handleOpenChange(open: boolean) {
     if (isControlled) {
@@ -377,6 +390,53 @@ export function TaskFormDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {allUsers.length > 0 && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">Assigned To</label>
+              <input type="hidden" name="assignedTo" value={selectedAssignedTo} />
+              <Select value={selectedAssignedTo} onValueChange={(v) => setSelectedAssignedTo(v ?? "__none__")}>
+                <SelectTrigger>
+                  <SelectValue>
+                    {selectedAssignedTo === "__none__"
+                      ? "Unassigned"
+                      : (() => {
+                          const u = allUsers.find((u) => u.id === selectedAssignedTo);
+                          return u ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              {u.image ? (
+                                <img src={u.image} alt="" className="w-4 h-4 rounded-full" />
+                              ) : (
+                                <span className="w-4 h-4 rounded-full bg-gray-600 flex items-center justify-center text-[8px] text-white font-bold">
+                                  {(u.name ?? u.email).charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                              {u.name ?? u.email}
+                            </span>
+                          ) : "Unassigned";
+                        })()}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Unassigned</SelectItem>
+                  {allUsers.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      <span className="inline-flex items-center gap-1.5">
+                        {u.image ? (
+                          <img src={u.image} alt="" className="w-4 h-4 rounded-full" />
+                        ) : (
+                          <span className="w-4 h-4 rounded-full bg-gray-600 flex items-center justify-center text-[8px] text-white font-bold">
+                            {(u.name ?? u.email).charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                        {u.name ?? u.email}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <TagPicker
             allTags={allTags}

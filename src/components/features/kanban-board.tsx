@@ -22,13 +22,22 @@ type Tag = {
 
 type Task = {
   id: string;
+  sequenceNumber?: number | null;
   title: string;
   description: string | null;
   status: string;
   priority: string;
+  assignedTo?: string | null;
   clickupTaskId: string | null;
   tags: Tag[];
   customer: { id: string; name: string; color: string } | null;
+};
+
+type User = {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
 };
 
 const columns = [
@@ -77,12 +86,14 @@ function KanbanCard({
   index,
   onDelete,
   onEdit,
+  allUsers = [],
 }: {
   task: Task;
   columnId: string;
   index: number;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  allUsers?: User[];
 }) {
   const { ref, isDragSource } = useSortable({
     id: task.id,
@@ -115,13 +126,39 @@ function KanbanCard({
         <GripVerticalIcon className="w-3 h-3 text-gray-600" />
       </div>
 
-      {/* Title */}
-      <p className="text-sm font-medium text-white leading-snug line-clamp-2 pr-8">
-        {task.title}
-      </p>
+      {/* Short ID + Title */}
+      <div className="flex items-start gap-1.5 pr-8">
+        {task.sequenceNumber != null && (
+          <span className="text-[10px] font-mono text-gray-500 mt-0.5 shrink-0">
+            T-{task.sequenceNumber}
+          </span>
+        )}
+        <p className="text-sm font-medium text-white leading-snug line-clamp-2">
+          {task.title}
+        </p>
+      </div>
 
-      {/* Metadata line: priority, tags, customer, sync */}
+      {/* Metadata line: assignee, priority, tags, customer, sync */}
       <div className="flex flex-wrap items-center gap-1 mt-1">
+        {task.assignedTo && (() => {
+          const user = allUsers.find((u) => u.id === task.assignedTo);
+          if (!user) return null;
+          return user.image ? (
+            <img
+              src={user.image}
+              alt={user.name ?? user.email}
+              title={user.name ?? user.email}
+              className="w-4 h-4 rounded-full"
+            />
+          ) : (
+            <span
+              title={user.name ?? user.email}
+              className="w-4 h-4 rounded-full bg-gray-600 flex items-center justify-center text-[8px] text-white font-bold shrink-0"
+            >
+              {(user.name ?? user.email).charAt(0).toUpperCase()}
+            </span>
+          );
+        })()}
         <span
           className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded ${priority.bg} ${priority.text} ${priority.border} border`}
         >
@@ -174,11 +211,13 @@ function KanbanColumn({
   tasks,
   onDelete,
   onEdit,
+  allUsers = [],
 }: {
   column: (typeof columns)[number];
   tasks: Task[];
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  allUsers?: User[];
 }) {
   const { ref, isDropTarget } = useDroppable({
     id: column.id,
@@ -220,6 +259,7 @@ function KanbanColumn({
             index={index}
             onDelete={onDelete}
             onEdit={onEdit}
+            allUsers={allUsers}
           />
         ))}
 
@@ -241,11 +281,13 @@ export function KanbanBoard({
   onStatusChange,
   onDelete,
   onEdit,
+  allUsers = [],
 }: {
   tasks: Task[];
   onStatusChange: (taskId: string, status: string) => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
+  allUsers?: User[];
 }) {
   // Group tasks by status into a record of arrays
   function groupTasks(taskList: Task[]) {
@@ -285,10 +327,12 @@ export function KanbanBoard({
           const draggedId = event.operation.source?.id;
           if (draggedId) {
             for (const [status, taskList] of Object.entries(next)) {
-              const found = taskList.find((t) => t.id === draggedId);
-              if (found && found.status !== status) {
-                // Status changed — update server
-                found.status = status;
+              const idx = taskList.findIndex((t) => t.id === draggedId);
+              if (idx !== -1 && taskList[idx].status !== status) {
+                // Status changed — produce new object (no mutation)
+                next[status] = taskList.map((t, i) =>
+                  i === idx ? { ...t, status } : t
+                );
                 onStatusChange(String(draggedId), status);
               }
             }
@@ -306,6 +350,7 @@ export function KanbanBoard({
             tasks={items[column.id] ?? []}
             onDelete={onDelete}
             onEdit={onEdit}
+            allUsers={allUsers}
           />
         ))}
       </div>

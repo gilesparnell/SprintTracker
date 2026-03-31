@@ -15,12 +15,21 @@ type Tag = {
 
 type Customer = { id: string; name: string; color: string };
 
+type User = {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+};
+
 type Task = {
   id: string;
+  sequenceNumber?: number | null;
   title: string;
   description: string | null;
   status: string;
   priority: string;
+  assignedTo?: string | null;
   clickupTaskId: string | null;
   tags: Tag[];
   customer: { id: string; name: string; color: string } | null;
@@ -31,11 +40,13 @@ export function TaskListWrapper({
   initialTasks,
   allTags,
   allCustomers,
+  allUsers = [],
 }: {
   sprintId: string;
   initialTasks: Task[];
   allTags: Tag[];
   allCustomers: Customer[];
+  allUsers?: User[];
 }) {
   const router = useRouter();
   const [view, setView] = useState<"kanban" | "list">("kanban");
@@ -105,6 +116,7 @@ export function TaskListWrapper({
         status: formData.get("status") as string,
         priority: formData.get("priority") as string,
         customerId: formData.get("customerId") as string,
+        assignedTo: formData.get("assignedTo") as string,
       }),
     });
 
@@ -143,6 +155,7 @@ export function TaskListWrapper({
         status: formData.get("status") as string,
         priority: formData.get("priority") as string,
         customerId: formData.get("customerId") as string,
+        assignedTo: formData.get("assignedTo") as string,
         tagIds,
       }),
     });
@@ -201,6 +214,7 @@ export function TaskListWrapper({
               title="New Task"
               allTags={allTags}
               allCustomers={allCustomers}
+              allUsers={allUsers}
             />
             <div className="flex items-center bg-gray-900 border border-gray-800 rounded-lg p-0.5">
               <button
@@ -277,6 +291,7 @@ export function TaskListWrapper({
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}
           onEdit={setEditingTask}
+          allUsers={allUsers}
         />
       ) : (
         <TaskList
@@ -298,9 +313,11 @@ export function TaskListWrapper({
             priority: editingTask.priority,
             tagIds: editingTask.tags.map((t) => t.id),
             customerId: editingTask.customer?.id,
+            assignedTo: editingTask.assignedTo ?? undefined,
           }}
           allTags={allTags}
           allCustomers={allCustomers}
+          allUsers={allUsers}
           open={!!editingTask}
           onOpenChange={(open) => {
             if (!open) setEditingTask(null);

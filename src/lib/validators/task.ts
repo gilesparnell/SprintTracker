@@ -7,6 +7,8 @@ export const taskSchema = z.object({
   status: taskStatusEnum.default("open"),
   priority: priorityEnum.default("medium"),
   customerId: z.string().optional(),
+  assignedTo: z.string().optional(),
+  userStoryId: z.string().optional(),
 });
 
 export type TaskInput = z.infer<typeof taskSchema>;

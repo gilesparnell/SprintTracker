@@ -6,6 +6,7 @@ import { deleteSprint, setSprintStatus } from "@/lib/actions/sprints";
 import { getTasksBySprintId } from "@/lib/actions/tasks";
 import { getAllTags, getTagsForTasks } from "@/lib/actions/tags";
 import { getAllCustomers } from "@/lib/actions/customers";
+import { getActiveUsers } from "@/lib/actions/users";
 import { getClickUpConfig } from "@/lib/actions/clickup-config";
 import { TaskListWrapper } from "@/components/features/task-list-wrapper";
 import { SprintClickUpLinkWrapper } from "@/components/features/sprint-clickup-link-wrapper";
@@ -65,6 +66,7 @@ export default async function SprintDetailPage({
   const config = await getClickUpConfig();
   const allTags = await getAllTags(db);
   const allCustomers = await getAllCustomers(db);
+  const allUsers = await getActiveUsers(db);
   const taskTagsMap = await getTagsForTasks(db, sprintTasks.map((t) => t.id));
   const allCustomersList = await getAllCustomers(db);
   const customerMap = Object.fromEntries(allCustomersList.map(c => [c.id, c]));
@@ -287,7 +289,7 @@ export default async function SprintDetailPage({
             </Link>
           )}
         </div>
-        <TaskListWrapper sprintId={id} initialTasks={tasksWithTags} allTags={allTags} allCustomers={allCustomers} />
+        <TaskListWrapper sprintId={id} initialTasks={tasksWithTags} allTags={allTags} allCustomers={allCustomers} allUsers={allUsers} />
       </div>
     </div>
   );

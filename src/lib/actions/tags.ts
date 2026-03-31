@@ -3,10 +3,7 @@
 import { eq, and, inArray } from "drizzle-orm";
 import { tags, taskTags, tasks } from "@/lib/db/schema";
 import { v4 as uuid } from "uuid";
-import type { LibSQLDatabase } from "drizzle-orm/libsql";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DB = LibSQLDatabase<any>;
+import type { DB } from "@/lib/db/types";
 
 export async function getAllTags(db: DB) {
   return db.select().from(tags).orderBy(tags.name).all();

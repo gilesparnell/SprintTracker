@@ -4,10 +4,8 @@ import { eq, asc } from "drizzle-orm";
 import { folders } from "@/lib/db/schema";
 import { folderSchema, type FolderInput } from "@/lib/validators/folder";
 import { v4 as uuid } from "uuid";
-import type { LibSQLDatabase } from "drizzle-orm/libsql";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DB = LibSQLDatabase<any>;
+import type { DB } from "@/lib/db/types";
+import { parseZodErrors } from "@/lib/helpers/zod-errors";
 
 export type FolderResult = {
   success: boolean;
@@ -18,13 +16,7 @@ export type FolderResult = {
 export async function createFolder(db: DB, input: Partial<FolderInput>): Promise<FolderResult> {
   const parsed = folderSchema.safeParse(input);
   if (!parsed.success) {
-    const fieldErrors: Record<string, string[]> = {};
-    for (const issue of parsed.error.issues) {
-      const path = issue.path.join(".");
-      if (!fieldErrors[path]) fieldErrors[path] = [];
-      fieldErrors[path].push(issue.message);
-    }
-    return { success: false, errors: fieldErrors };
+    return { success: false, errors: parseZodErrors(parsed.error) };
   }
 
   const id = uuid();
@@ -48,13 +40,7 @@ export async function getAllFolders(db: DB) {
 export async function updateFolder(db: DB, id: string, input: Partial<FolderInput>): Promise<FolderResult> {
   const parsed = folderSchema.safeParse(input);
   if (!parsed.success) {
-    const fieldErrors: Record<string, string[]> = {};
-    for (const issue of parsed.error.issues) {
-      const path = issue.path.join(".");
-      if (!fieldErrors[path]) fieldErrors[path] = [];
-      fieldErrors[path].push(issue.message);
-    }
-    return { success: false, errors: fieldErrors };
+    return { success: false, errors: parseZodErrors(parsed.error) };
   }
 
   await db.update(folders)

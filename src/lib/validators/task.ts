@@ -1,10 +1,11 @@
 import { z } from "zod/v4";
+import { priorityEnum, taskStatusEnum } from "./shared";
 
 export const taskSchema = z.object({
   title: z.string().min(1, "Task title is required"),
   description: z.string().optional(),
-  status: z.enum(["open", "in_progress", "done"]).default("open"),
-  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+  status: taskStatusEnum.default("open"),
+  priority: priorityEnum.default("medium"),
   customerId: z.string().optional(),
 });
 

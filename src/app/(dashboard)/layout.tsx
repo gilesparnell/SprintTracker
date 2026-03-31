@@ -4,25 +4,29 @@ import Link from "next/link";
 import {
   FolderIcon,
   LayoutDashboardIcon,
+  ListIcon,
   SettingsIcon,
   ZapIcon,
 } from "lucide-react";
 import { LoveNotes } from "@/components/features/love-notes";
 import { MobileSidebarContent } from "@/components/features/mobile-sidebar";
 import { UserMenu } from "@/components/features/user-menu";
+import { NotificationBell } from "@/components/features/notification-bell";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { sprints, folders } from "@/lib/db/schema";
-import { asc, desc } from "drizzle-orm";
+import { sprints, folders, userStories } from "@/lib/db/schema";
+import { asc, desc, eq, sql } from "drizzle-orm";
 
 function SidebarNav({
   allFolders,
   activeSprints,
   completedSprints,
+  backlogCount,
 }: {
   allFolders: { id: string; name: string }[];
   activeSprints: { id: string; name: string; status: string; folderId: string | null }[];
   completedSprints: { id: string; name: string; status: string; folderId: string | null }[];
+  backlogCount: number;
 }) {
   return (
     <>
@@ -41,6 +45,18 @@ function SidebarNav({
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1">
+        <Link
+          href="/backlog"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-gray-200 transition-all"
+        >
+          <ListIcon className="w-4 h-4" />
+          Backlog
+          {backlogCount > 0 && (
+            <span className="ml-auto text-xs font-mono px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-400">
+              {backlogCount}
+            </span>
+          )}
+        </Link>
         <Link
           href="/sprints"
           className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium bg-green-500/10 text-green-400 border border-green-500/30 transition-all"
@@ -148,11 +164,19 @@ export default async function DashboardLayout({
   const activeSprints = allSprints.filter((s) => s.status !== "completed");
   const completedSprints = allSprints.filter((s) => s.status === "completed");
 
+  const backlogCountResult = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(userStories)
+    .where(eq(userStories.status, "backlog"))
+    .get();
+  const backlogCount = backlogCountResult?.count ?? 0;
+
   const sidebarContent = (
     <SidebarNav
       allFolders={allFolders}
       activeSprints={activeSprints}
       completedSprints={completedSprints}
+      backlogCount={backlogCount}
     />
   );
 
@@ -171,7 +195,8 @@ export default async function DashboardLayout({
       {/* Main */}
       <main className="flex-1 overflow-auto pt-14 md:pt-0">
         {/* Header bar with user menu */}
-        <div className="hidden md:flex items-center justify-end px-8 py-3 border-b border-gray-800">
+        <div className="hidden md:flex items-center justify-end gap-2 px-8 py-3 border-b border-gray-800">
+          {session?.user && <NotificationBell />}
           {session?.user && <UserMenu user={session.user} />}
         </div>
         <div className="p-4 md:p-8">{children}</div>

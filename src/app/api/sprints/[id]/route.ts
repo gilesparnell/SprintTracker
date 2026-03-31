@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { updateSprint, deleteSprint } from "@/lib/actions/sprints";
+import { requireAuth } from "@/lib/auth-helpers";
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (!authResult.authenticated) return authResult.response;
+
   const { id } = await params;
   const body = await request.json();
   const result = await updateSprint(db, id, body);
@@ -16,6 +20,9 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (!authResult.authenticated) return authResult.response;
+
   const { id } = await params;
   const result = await deleteSprint(db, id);
   return NextResponse.json(result);

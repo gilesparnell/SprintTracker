@@ -6,11 +6,15 @@ import { updateTaskStatus } from "@/lib/actions/tasks";
 import { ClickUpClient } from "@/lib/clickup/client";
 import { syncTaskStatusToClickUp } from "@/lib/clickup/sync";
 import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
+import { requireAuth } from "@/lib/auth-helpers";
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (!authResult.authenticated) return authResult.response;
+
   const { id } = await params;
   const body = await request.json();
   const result = await updateTaskStatus(db, id, body.status);

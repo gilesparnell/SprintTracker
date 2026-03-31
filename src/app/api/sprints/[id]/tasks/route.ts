@@ -7,11 +7,15 @@ import { setTaskTags } from "@/lib/actions/tags";
 import { getClickUpToken } from "@/lib/actions/clickup-config";
 import { ClickUpClient } from "@/lib/clickup/client";
 import { syncTaskToClickUp } from "@/lib/clickup/sync";
+import { requireAuth } from "@/lib/auth-helpers";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAuth();
+  if (!authResult.authenticated) return authResult.response;
+
   const { id: sprintId } = await params;
   const { title, description, status, priority, customerId, tagIds } =
     await request.json();

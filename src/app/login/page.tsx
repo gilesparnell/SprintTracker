@@ -59,6 +59,44 @@ export default async function LoginPage({
             Sign in with Google
           </button>
         </form>
+
+        {/* Dev login — development only */}
+        {process.env.NODE_ENV === "development" && (
+          <form
+            action={async (formData: FormData) => {
+              "use server";
+              await signIn("dev-login", {
+                email: formData.get("email") as string,
+                redirectTo: "/sprints",
+              });
+            }}
+            className="mt-4"
+          >
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-800" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-gray-950 px-2 text-gray-600">DEV ONLY</span>
+              </div>
+            </div>
+            <div className="mt-4 space-y-3">
+              <input
+                name="email"
+                type="email"
+                defaultValue="gilesparnell@gmail.com"
+                placeholder="Email"
+                className="w-full rounded-xl border border-gray-700 bg-gray-900 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
+              />
+              <button
+                type="submit"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-400 transition-all hover:bg-amber-500/20"
+              >
+                Dev Login
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
-import { TagIcon, UsersIcon, LinkIcon } from "lucide-react";
+import { TagIcon, UsersIcon, LinkIcon, PackageIcon } from "lucide-react";
 
 const tabs = [
   { id: "tags", label: "Tags", icon: TagIcon },
   { id: "customers", label: "Customers", icon: UsersIcon },
+  { id: "products", label: "Products", icon: PackageIcon },
   { id: "clickup", label: "ClickUp", icon: LinkIcon },
 ];
 

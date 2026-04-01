@@ -9,14 +9,16 @@ export async function GET(request: Request) {
   if (!authResult.authenticated) return authResult.response;
 
   const { searchParams } = new URL(request.url);
-  const stories = await getStories(db, {
+  const result = await getStories(db, {
     status: searchParams.get("status") ?? undefined,
     assignedTo: searchParams.get("assignedTo") ?? undefined,
     customerId: searchParams.get("customerId") ?? undefined,
     productId: searchParams.get("productId") ?? undefined,
     type: searchParams.get("type") ?? undefined,
+    page: searchParams.get("page") ? parseInt(searchParams.get("page")!, 10) : undefined,
+    pageSize: searchParams.get("pageSize") ? parseInt(searchParams.get("pageSize")!, 10) : undefined,
   });
-  return NextResponse.json(stories);
+  return NextResponse.json(result);
 }
 
 export async function POST(request: Request) {
@@ -29,7 +31,7 @@ export async function POST(request: Request) {
     console.log("[stories/POST] userId:", authResult.userId);
     const result = await createStory(db, authResult.userId, body);
     console.log("[stories/POST] result:", JSON.stringify(result));
-    if (result.success) revalidateTag("sidebar", "seconds");
+    if (result.success) revalidateTag("sidebar", { expire: 0 });
     return NextResponse.json(result);
   } catch (error) {
     console.error("[stories/POST] error:", error);

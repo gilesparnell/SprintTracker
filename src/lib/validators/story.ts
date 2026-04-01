@@ -18,7 +18,7 @@ export const updateStorySchema = z.object({
   type: storyTypeEnum.optional(),
   priority: priorityEnum,
   status: storyStatusEnum.optional(),
-  productId: z.string().nullish(),
+  productId: z.string().min(1, "Product is required"),
   assignedTo: z.string().nullish(),
   customerId: z.string().nullish(),
 });

@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "./auth.config";
 import { db } from "./db";
 import { isEmailAllowed, upsertUser, getUserByEmail } from "./actions/users";
@@ -10,7 +11,9 @@ const getCachedUserStatus = unstable_cache(
   async (userId: string) => {
     const { getUserById } = await import("./actions/users");
     const user = await getUserById(db, userId);
-    return user ? { exists: true, status: user.status } : { exists: false, status: null };
+    return user
+      ? { exists: true, status: user.status, role: user.role }
+      : { exists: false, status: null, role: null };
   },
   ["user-auth-status"],
   { revalidate: 60 }
@@ -28,6 +31,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       },
     }),
+    // Dev-only credentials provider for automated testing
+    ...(process.env.NODE_ENV === "development"
+      ? [
+          Credentials({
+            id: "dev-login",
+            name: "Dev Login",
+            credentials: {
+              email: { label: "Email", type: "email" },
+            },
+            async authorize(credentials) {
+              const email = credentials?.email as string;
+              if (!email) return null;
+              const allowed = await isEmailAllowed(db, email);
+              if (!allowed) return null;
+              await upsertUser(db, { email, name: email.split("@")[0] });
+              const user = await getUserByEmail(db, email);
+              if (!user) return null;
+              return { id: user.id, email: user.email, name: user.name };
+            },
+          }),
+        ]
+      : []),
   ],
   callbacks: {
     ...authConfig.callbacks,
@@ -58,12 +83,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
 
     async jwt({ token, user }) {
-      // On initial sign-in, populate token with user ID
+      // On initial sign-in, populate token with user ID + role
       if (user?.email) {
         const dbUser = await getUserByEmail(db, user.email);
         if (dbUser) {
           token.id = dbUser.id;
           token.status = dbUser.status;
+          token.role = dbUser.role;
         }
       }
 
@@ -74,6 +100,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return {} as typeof token;
         }
         token.status = cached.status;
+        token.role = cached.role;
       }
 
       return token;
@@ -83,6 +110,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token.id) {
         session.user.id = token.id as string;
         session.user.status = (token.status as string) ?? "active";
+        session.user.role = (token.role as string) ?? "user";
       }
       return session;
     },

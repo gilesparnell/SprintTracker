@@ -10,9 +10,16 @@ import { asc } from "drizzle-orm";
 import { BacklogList } from "@/components/features/backlog-list";
 import { getAllProducts } from "@/lib/actions/products";
 
-export default async function BacklogPage() {
-  const [stories, users, customers, allSprints, unlinkedTasks, allProducts] = await Promise.all([
-    getStories(db, { status: "backlog" }),
+export default async function BacklogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pageSize?: string }>;
+}) {
+  const params = await searchParams;
+  const pageSize = parseInt(params.pageSize ?? "50", 10);
+
+  const [storiesResult, users, customers, allSprints, unlinkedTasks, allProducts] = await Promise.all([
+    getStories(db, { status: "backlog", pageSize }),
     getActiveUsers(db),
     getAllCustomers(db),
     db
@@ -32,12 +39,14 @@ export default async function BacklogPage() {
       <div>
         <h1 className="text-2xl font-bold text-white">Backlog</h1>
         <p className="text-sm text-gray-500 mt-1">
-          {stories.length} {stories.length === 1 ? "story" : "stories"}
+          {storiesResult.total} {storiesResult.total === 1 ? "story" : "stories"}
         </p>
       </div>
 
       <BacklogList
-        stories={stories}
+        stories={storiesResult.stories}
+        totalStories={storiesResult.total}
+        pageSize={pageSize}
         users={users}
         customers={customers}
         sprints={activeSprints}

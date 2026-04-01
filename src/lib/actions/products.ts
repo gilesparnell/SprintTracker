@@ -152,6 +152,18 @@ export async function getAllProducts(db: DB): Promise<Product[]> {
     .all();
 }
 
+export async function getStoriesForProduct(db: DB, productId: string) {
+  return db
+    .select({
+      id: userStories.id,
+      title: userStories.title,
+      status: userStories.status,
+    })
+    .from(userStories)
+    .where(eq(userStories.productId, productId))
+    .all();
+}
+
 export async function getProductTree(db: DB): Promise<ProductTreeNode[]> {
   const allProducts = await db
     .select()

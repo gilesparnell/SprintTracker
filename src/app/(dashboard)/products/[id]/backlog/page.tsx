@@ -12,10 +12,14 @@ import { BacklogList } from "@/components/features/backlog-list";
 
 export default async function ProductBacklogPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ pageSize?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
+  const pageSize = parseInt(sp.pageSize ?? "50", 10);
 
   const product = await db
     .select()
@@ -27,8 +31,8 @@ export default async function ProductBacklogPage({
     notFound();
   }
 
-  const [stories, users, customers, allSprints, allProducts] = await Promise.all([
-    getStories(db, { status: "backlog", productId: id }),
+  const [storiesResult, users, customers, allSprints, allProducts] = await Promise.all([
+    getStories(db, { status: "backlog", productId: id, pageSize }),
     getActiveUsers(db),
     getAllCustomers(db),
     db
@@ -52,12 +56,14 @@ export default async function ProductBacklogPage({
           <h1 className="text-2xl font-bold text-white">{product.name}</h1>
         </div>
         <p className="text-sm text-gray-500 mt-1">
-          {stories.length} {stories.length === 1 ? "story" : "stories"} in backlog
+          {storiesResult.total} {storiesResult.total === 1 ? "story" : "stories"} in backlog
         </p>
       </div>
 
       <BacklogList
-        stories={stories}
+        stories={storiesResult.stories}
+        totalStories={storiesResult.total}
+        pageSize={pageSize}
         users={users}
         customers={customers}
         sprints={activeSprints}

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { memo } from "react";
 
-export function SidebarNavLink({
+export const SidebarNavLink = memo(function SidebarNavLink({
   href,
   matchPrefixes,
   children,
@@ -32,4 +33,4 @@ export function SidebarNavLink({
       {children}
     </Link>
   );
-}
+});

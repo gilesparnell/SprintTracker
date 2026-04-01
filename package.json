@@ -1,9 +1,10 @@
 {
   "name": "sprint-tracker",
-  "version": "0.1.0",
+  "version": "0.9.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "bash scripts/snapshot-prod.sh && next dev",
+    "dev:skip-snapshot": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

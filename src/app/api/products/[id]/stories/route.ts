@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
 import { db } from "@/lib/db";
-import { removeTaskFromSprint } from "@/lib/actions/tasks";
+import { getStoriesForProduct } from "@/lib/actions/products";
 import { requireAuth } from "@/lib/auth-helpers";
 
-export async function POST(
+export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -12,7 +11,6 @@ export async function POST(
   if (!authResult.authenticated) return authResult.response;
 
   const { id } = await params;
-  const result = await removeTaskFromSprint(db, id);
-  if (result.success) revalidateTag("sidebar", { expire: 0 });
-  return NextResponse.json(result);
+  const stories = await getStoriesForProduct(db, id);
+  return NextResponse.json(stories);
 }

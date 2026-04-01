@@ -16,6 +16,7 @@ import {
   subTasks,
   notes,
   notifications,
+  products,
 } from "@/lib/db/schema";
 import { v4 as uuid } from "uuid";
 import { upsertUser, isEmailAllowed, addAllowedEmail } from "@/lib/actions/users";
@@ -55,6 +56,7 @@ describe("Multi-User Sprint Tracker Integration", () => {
     await db.delete(tasks);
     await db.delete(userStories);
     await db.delete(sprints);
+    await db.delete(products);
     await db.delete(allowedEmails);
     await db.delete(users);
     // Reset sequences
@@ -107,6 +109,10 @@ describe("Multi-User Sprint Tracker Integration", () => {
     const alice = await upsertUser(db, { email: "alice@test.com", name: "Alice" });
     const bob = await upsertUser(db, { email: "bob@test.com", name: "Bob" });
 
+    // Setup product
+    const productId = uuid();
+    await db.insert(products).values({ id: productId, name: "General", color: "#6b7280" });
+
     // Create a sprint
     const sprintResult = await createSprint(db, {
       name: "Sprint 1",
@@ -123,6 +129,7 @@ describe("Multi-User Sprint Tracker Integration", () => {
       description: "Implement login",
       priority: "high",
       assignedTo: alice!.id,
+      productId,
     });
     expect(storyResult.success).toBe(true);
     const story = storyResult.data!;
@@ -130,9 +137,9 @@ describe("Multi-User Sprint Tracker Integration", () => {
     expect(story.status).toBe("backlog");
 
     // Verify backlog listing
-    const backlogStories = await getStories(db, { status: "backlog" });
-    expect(backlogStories).toHaveLength(1);
-    expect(backlogStories[0].id).toBe(story.id);
+    const backlogResult = await getStories(db, { status: "backlog" });
+    expect(backlogResult.stories).toHaveLength(1);
+    expect(backlogResult.stories[0].id).toBe(story.id);
 
     // Move story to sprint
     const moveResult = await moveStoryToSprint(db, alice!.id, story.id, sprintId);
@@ -213,7 +220,9 @@ describe("Multi-User Sprint Tracker Integration", () => {
     });
 
     const unread = await getUnreadCount(db, alice!.id);
-    expect(unread).toBe(1);
+    // 2 notifications: one from createTask assignment (bob created, assigned to alice),
+    // and one from the explicit triggerNotification above
+    expect(unread).toBe(2);
 
     // Mark as read
     const allNotifications = await db
@@ -221,8 +230,11 @@ describe("Multi-User Sprint Tracker Integration", () => {
       .from(notifications)
       .where(eq(notifications.userId, alice!.id))
       .all();
-    expect(allNotifications).toHaveLength(1);
+    expect(allNotifications).toHaveLength(2);
     await markAsRead(db, alice!.id, allNotifications[0].id);
+    expect(await getUnreadCount(db, alice!.id)).toBe(1);
+    // Mark all remaining as read
+    await markAllAsRead(db, alice!.id);
     expect(await getUnreadCount(db, alice!.id)).toBe(0);
   });
 
@@ -374,9 +386,11 @@ describe("Multi-User Sprint Tracker Integration", () => {
 
   it("should reorder stories in backlog with gapped integers", async () => {
     const alice = await upsertUser(db, { email: "alice@test.com", name: "Alice" });
-    const story1 = await createStory(db, alice!.id, { title: "Story 1" });
-    const story2 = await createStory(db, alice!.id, { title: "Story 2" });
-    const story3 = await createStory(db, alice!.id, { title: "Story 3" });
+    const productId = uuid();
+    await db.insert(products).values({ id: productId, name: "General", color: "#6b7280" });
+    const story1 = await createStory(db, alice!.id, { title: "Story 1", productId });
+    const story2 = await createStory(db, alice!.id, { title: "Story 2", productId });
+    const story3 = await createStory(db, alice!.id, { title: "Story 3", productId });
 
     // Move story3 between story1 and story2
     const s1Order = story1.data!.sortOrder;
@@ -387,10 +401,10 @@ describe("Multi-User Sprint Tracker Integration", () => {
     expect(reorderResult.success).toBe(true);
 
     // Verify order
-    const stories = await getStories(db, { status: "backlog" });
-    expect(stories[0].id).toBe(story1.data!.id);
-    expect(stories[1].id).toBe(story3.data!.id);
-    expect(stories[2].id).toBe(story2.data!.id);
+    const storiesResult = await getStories(db, { status: "backlog" });
+    expect(storiesResult.stories[0].id).toBe(story1.data!.id);
+    expect(storiesResult.stories[1].id).toBe(story3.data!.id);
+    expect(storiesResult.stories[2].id).toBe(story2.data!.id);
   });
 
   // ── Task deletion cascades ────────────────────────────────
@@ -457,13 +471,20 @@ describe("Multi-User Sprint Tracker Integration", () => {
 
   // ── Task with nullable sprintId ───────────────────────────
 
-  it("should create a task without a sprint (backlog task)", async () => {
+  it("should create a task without a sprint (backlog task via story)", async () => {
+    const alice = await upsertUser(db, { email: "alice@test.com", name: "Alice" });
+    const productId = uuid();
+    await db.insert(products).values({ id: productId, name: "General", color: "#6b7280" });
+    const story = await createStory(db, alice!.id, { title: "Backlog story", productId });
+
     const result = await createTask(db, null, {
       title: "Unassigned to sprint",
       priority: "low",
+      userStoryId: story.data!.id,
     });
     expect(result.success).toBe(true);
     expect(result.task!.sprintId).toBeNull();
+    expect(result.task!.userStoryId).toBe(story.data!.id);
   });
 
   // ── Assignment change triggers notification ───────────────

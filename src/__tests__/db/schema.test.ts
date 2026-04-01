@@ -23,7 +23,7 @@ describe("Database Schema", () => {
     expect(tableNames).toEqual(
       [
         "allowed_emails", "clickup_config", "customers", "folders",
-        "notes", "notifications", "sequences", "sprints", "sub_tasks",
+        "notes", "notifications", "products", "sequences", "sprints", "sub_tasks",
         "sync_log", "tags", "task_tags", "tasks", "user_stories", "users",
       ].sort()
     );

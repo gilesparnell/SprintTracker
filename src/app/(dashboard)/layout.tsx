@@ -7,12 +7,12 @@ import {
   ShieldIcon,
   ZapIcon,
 } from "lucide-react";
+import pkg from "../../../package.json";
 import { SidebarNavLink } from "@/components/features/sidebar-nav-link";
-import { LoveNotes } from "@/components/features/love-notes";
+import { LazyLoveNotes, LazyQuickSubmit } from "@/components/features/lazy-widgets";
 import { MobileSidebarContent } from "@/components/features/mobile-sidebar";
 import { UserMenu } from "@/components/features/user-menu";
 import { NotificationBell } from "@/components/features/notification-bell";
-import { QuickSubmit } from "@/components/features/quick-submit";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { sprints, folders, userStories, products } from "@/lib/db/schema";
@@ -113,7 +113,10 @@ function SidebarNav({
         <div>
           <h1 className="text-base font-bold text-white">Sprint Tracker</h1>
           <p className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">
-            v1.0
+            v{pkg.version}
+            {process.env.VERCEL_GIT_COMMIT_SHA && (
+              <span className="text-gray-600"> [{process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 7)}]</span>
+            )}
           </p>
         </div>
       </div>
@@ -258,7 +261,7 @@ function SidebarNav({
 
       {/* Love Notes */}
       <div className="border-t border-pink-500/10">
-        <LoveNotes />
+        <LazyLoveNotes />
       </div>
 
       {/* Footer */}
@@ -325,7 +328,7 @@ export default async function DashboardLayout({
           {session?.user && <UserMenu user={session.user} />}
         </div>
         <div className="p-4 md:p-8">{children}</div>
-        <QuickSubmit products={sidebarData.allProducts} />
+        <LazyQuickSubmit products={sidebarData.allProducts} />
       </main>
     </div>
   );

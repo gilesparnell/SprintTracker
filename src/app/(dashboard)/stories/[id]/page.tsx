@@ -28,7 +28,7 @@ export default async function StoryDetailPage({
     getTasksByStoryId(db, id),
     getActiveUsers(db),
     getAllCustomers(db),
-    getStories(db),
+    getStories(db).then((r) => r.stories),
     getAllProducts(db),
   ]);
 

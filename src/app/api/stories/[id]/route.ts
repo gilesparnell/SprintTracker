@@ -29,7 +29,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
   const result = await updateStory(db, authResult.userId, id, body);
-  if (result.success) revalidateTag("sidebar", "seconds");
+  if (result.success) revalidateTag("sidebar", { expire: 0 });
   return NextResponse.json(result);
 }
 
@@ -58,6 +58,6 @@ export async function DELETE(
   }
 
   const result = await deleteStory(db, authResult.userId, id, mode, reassignStoryId);
-  if (result.success) revalidateTag("sidebar", "seconds");
+  if (result.success) revalidateTag("sidebar", { expire: 0 });
   return NextResponse.json(result);
 }

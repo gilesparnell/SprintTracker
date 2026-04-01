@@ -126,7 +126,7 @@ export function StoryFormDialog({
       type: storyType,
       status,
       priority,
-      productId: productId === "__none__" ? null : productId,
+      productId: productId === "__none__" ? undefined : productId,
       assignedTo: assignee === "__none__" ? null : assignee,
       customerId: customer === "__none__" ? null : customer,
     };

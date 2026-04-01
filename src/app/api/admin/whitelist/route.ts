@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod/v4";
 import { db } from "@/lib/db";
-import { requireAuth } from "@/lib/auth-helpers";
+import { requireAdmin } from "@/lib/auth-helpers";
 import { getAllowedEmails, addAllowedEmail } from "@/lib/actions/users";
 
 export async function GET() {
-  const authResult = await requireAuth();
+  const authResult = await requireAdmin();
   if (!authResult.authenticated) return authResult.response;
 
   const emails = await getAllowedEmails(db);
@@ -17,7 +17,7 @@ const addEmailSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const authResult = await requireAuth();
+  const authResult = await requireAdmin();
   if (!authResult.authenticated) return authResult.response;
 
   const body = await request.json();

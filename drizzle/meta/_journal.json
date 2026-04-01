@@ -36,6 +36,13 @@
       "when": 1774974336237,
       "tag": "0004_sudden_catseye",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1775017420921,
+      "tag": "0005_freezing_lyja",
+      "breakpoints": true
     }
   ]
 }

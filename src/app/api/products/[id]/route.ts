@@ -31,7 +31,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
   const result = await updateProduct(db, id, body);
-  if (result.success) revalidateTag("sidebar", "seconds");
+  if (result.success) revalidateTag("sidebar", { expire: 0 });
   return NextResponse.json(result);
 }
 
@@ -44,6 +44,6 @@ export async function DELETE(
 
   const { id } = await params;
   const result = await deleteProduct(db, id);
-  if (result.success) revalidateTag("sidebar", "seconds");
+  if (result.success) revalidateTag("sidebar", { expire: 0 });
   return NextResponse.json(result);
 }

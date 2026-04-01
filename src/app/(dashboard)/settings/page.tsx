@@ -2,10 +2,12 @@ export const dynamic = "force-dynamic";
 
 import { ClickUpHierarchyBrowser } from "@/components/features/clickup-hierarchy-browser";
 import { CustomerManager } from "@/components/features/customer-manager";
+import { ProductManager } from "@/components/features/product-manager";
 import { SettingsTabs } from "@/components/features/settings-tabs";
 import { TagManager } from "@/components/features/tag-manager";
 import { getClickUpConfig, getClickUpToken } from "@/lib/actions/clickup-config";
 import { getAllCustomers } from "@/lib/actions/customers";
+import { getAllProducts } from "@/lib/actions/products";
 import { getAllTags } from "@/lib/actions/tags";
 import { db } from "@/lib/db";
 
@@ -14,6 +16,7 @@ export default async function SettingsPage() {
   const hasToken = !!(await getClickUpToken());
   const allTags = await getAllTags(db);
   const allCustomers = await getAllCustomers(db);
+  const allProducts = await getAllProducts(db);
 
   return (
     <div className="max-w-5xl">
@@ -35,7 +38,13 @@ export default async function SettingsPage() {
           <CustomerManager initialCustomers={allCustomers} />
         </div>
 
-        {/* Tab 2: ClickUp */}
+        {/* Tab 2: Products */}
+        <div className="bg-gray-900/30 border border-gray-800 rounded-2xl p-6">
+          <h3 className="text-lg font-bold text-white mb-4">Products</h3>
+          <ProductManager initialProducts={allProducts} />
+        </div>
+
+        {/* Tab 3: ClickUp */}
         <div className="space-y-6">
           <div className="bg-gray-900/30 border border-gray-800 rounded-2xl p-6">
             <h3 className="text-lg font-bold text-white mb-2">How ClickUp sync works</h3>

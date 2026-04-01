@@ -116,6 +116,7 @@ export default async function TaskDetailPage({
           taskId={id}
           taskTitle={task.title}
           sprintId={task.sprintId}
+          userStoryId={task.userStoryId}
           subtaskCount={subtasks.length}
         />
       </div>

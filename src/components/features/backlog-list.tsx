@@ -1,11 +1,19 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import Link from "next/link";
-import { PlusIcon, FilterIcon, UnlinkIcon, Trash2Icon, CheckSquareIcon, XSquareIcon } from "lucide-react";
+import {
+  AlertTriangleIcon,
+  CheckSquareIcon,
+  FilterIcon,
+  PlusIcon,
+  Trash2Icon,
+  UnlinkIcon,
+  XSquareIcon,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -69,6 +77,36 @@ const priorityConfig: Record<string, { label: string; bg: string; text: string; 
   urgent: { label: "Urgent", bg: "bg-red-900/20", text: "text-red-400", border: "border-red-500/30" },
 };
 
+function SelectionCheckbox({
+  selected,
+  onToggle,
+}: {
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle();
+      }}
+      className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+        selected
+          ? "bg-red-500 border-red-500"
+          : "border-gray-600 hover:border-gray-400"
+      }`}
+    >
+      {selected && (
+        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 function SortableStoryCard({
   story,
   index,
@@ -76,6 +114,8 @@ function SortableStoryCard({
   users,
   customers,
   sprints,
+  selected,
+  onToggleSelect,
 }: {
   story: StoryWithTaskCount;
   index: number;
@@ -83,6 +123,8 @@ function SortableStoryCard({
   users: User[];
   customers: Customer[];
   sprints: Sprint[];
+  selected: boolean;
+  onToggleSelect: () => void;
 }) {
   const { ref, isDragSource } = useSortable({
     id: story.id,
@@ -95,15 +137,22 @@ function SortableStoryCard({
   return (
     <div
       ref={ref}
-      className={isDragSource ? "opacity-40 scale-95 transition-all" : "transition-all"}
+      className={`flex items-center gap-1 ${isDragSource ? "opacity-40 scale-95 transition-all" : "transition-all"} ${
+        selected ? "border border-red-500/30 bg-red-900/10 rounded-lg" : ""
+      }`}
     >
-      <StoryCard
-        story={story}
-        allStories={allStories}
-        users={users}
-        customers={customers}
-        sprints={sprints}
-      />
+      <div className="pl-2 shrink-0">
+        <SelectionCheckbox selected={selected} onToggle={onToggleSelect} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <StoryCard
+          story={story}
+          allStories={allStories}
+          users={users}
+          customers={customers}
+          sprints={sprints}
+        />
+      </div>
     </div>
   );
 }
@@ -116,6 +165,8 @@ type Product = {
 
 export function BacklogList({
   stories: initialStories,
+  totalStories = 0,
+  pageSize = 50,
   users,
   customers,
   sprints,
@@ -123,6 +174,8 @@ export function BacklogList({
   unlinkedTasks: initialUnlinkedTasks = [],
 }: {
   stories: StoryWithTaskCount[];
+  totalStories?: number;
+  pageSize?: number;
   users: User[];
   customers: Customer[];
   sprints: Sprint[];
@@ -130,16 +183,43 @@ export function BacklogList({
   unlinkedTasks?: UnlinkedTask[];
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [stories, setStories] = useState(initialStories);
+  const hasMore = initialStories.length < totalStories;
+
+  function changePageSize(newSize: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("pageSize", String(newSize));
+    router.push(`${pathname}?${params.toString()}`);
+  }
   const [filterAssignee, setFilterAssignee] = useState("__all__");
   const [filterCustomer, setFilterCustomer] = useState("__all__");
   const [createOpen, setCreateOpen] = useState(false);
   const snapshotRef = useRef<StoryWithTaskCount[] | null>(null);
+
+  // Selection state
+  const [selectedStoryIds, setSelectedStoryIds] = useState<string[]>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+
+  // Delete dialogue state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const hasSelections = selectedTaskIds.length > 0;
+  const hasStorySelections = selectedStoryIds.length > 0;
+  const hasTaskSelections = selectedTaskIds.length > 0;
+  const hasAnySelection = hasStorySelections || hasTaskSelections;
+
+  // Compute impact of selected stories
+  const selectedStories = stories.filter((s) => selectedStoryIds.includes(s.id));
+  const totalTasksInSelectedStories = selectedStories.reduce((sum, s) => sum + s.taskCount, 0);
+
+  function toggleStorySelection(storyId: string) {
+    setSelectedStoryIds((prev) =>
+      prev.includes(storyId) ? prev.filter((id) => id !== storyId) : [...prev, storyId]
+    );
+  }
 
   function toggleTaskSelection(taskId: string) {
     setSelectedTaskIds((prev) =>
@@ -147,24 +227,47 @@ export function BacklogList({
     );
   }
 
+  function selectAllStories() {
+    setSelectedStoryIds(filteredStories.map((s) => s.id));
+  }
+
   function selectAllTasks() {
     setSelectedTaskIds(initialUnlinkedTasks.map((t) => t.id));
   }
 
-  function deselectAllTasks() {
+  function deselectAll() {
+    setSelectedStoryIds([]);
     setSelectedTaskIds([]);
+  }
+
+  function openDeleteDialog() {
+    setDeleteStep(1);
+    setDeleteDialogOpen(true);
   }
 
   async function handleBulkDelete() {
     setIsDeleting(true);
     try {
+      // Delete stories with cascade mode
+      await Promise.all(
+        selectedStoryIds.map((id) =>
+          fetch(`/api/stories/${id}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "cascade" }),
+          })
+        )
+      );
+      // Delete tasks
       await Promise.all(
         selectedTaskIds.map((id) =>
           fetch(`/api/tasks/${id}`, { method: "DELETE" })
         )
       );
+      setSelectedStoryIds([]);
       setSelectedTaskIds([]);
       setDeleteDialogOpen(false);
+      setDeleteStep(1);
       router.refresh();
     } finally {
       setIsDeleting(false);
@@ -309,7 +412,75 @@ export function BacklogList({
             }
           />
         </div>
+
+        {/* Page size + count */}
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <span>
+            Showing {initialStories.length} of {totalStories}
+          </span>
+          <select
+            value={pageSize}
+            onChange={(e) => changePageSize(parseInt(e.target.value, 10))}
+            className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-gray-600"
+          >
+            <option value={10}>10</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </div>
       </div>
+
+      {/* Bulk action toolbar */}
+      {hasAnySelection && (
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-red-500/30 bg-red-900/10">
+          <span className="text-sm text-gray-300">
+            {hasStorySelections && (
+              <span>
+                {selectedStoryIds.length} {selectedStoryIds.length === 1 ? "story" : "stories"}
+              </span>
+            )}
+            {hasStorySelections && hasTaskSelections && <span> + </span>}
+            {hasTaskSelections && (
+              <span>
+                {selectedTaskIds.length} {selectedTaskIds.length === 1 ? "task" : "tasks"}
+              </span>
+            )}
+            <span className="text-gray-500"> selected</span>
+          </span>
+          {filteredStories.length > 0 && (
+            <button
+              onClick={selectAllStories}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+            >
+              <CheckSquareIcon className="w-3.5 h-3.5" />
+              All Stories
+            </button>
+          )}
+          {initialUnlinkedTasks.length > 0 && (
+            <button
+              onClick={selectAllTasks}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+            >
+              <CheckSquareIcon className="w-3.5 h-3.5" />
+              All Tasks
+            </button>
+          )}
+          <button
+            onClick={deselectAll}
+            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+          >
+            <XSquareIcon className="w-3.5 h-3.5" />
+            Deselect All
+          </button>
+          <button
+            onClick={openDeleteDialog}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-400 bg-red-900/20 border border-red-500/30 rounded-lg hover:bg-red-900/40 transition-colors"
+          >
+            <Trash2Icon className="w-3.5 h-3.5" />
+            Delete Selected
+          </button>
+        </div>
+      )}
 
       {/* Story list with drag and drop */}
       {filteredStories.length === 0 ? (
@@ -340,10 +511,24 @@ export function BacklogList({
                 users={users}
                 customers={customers}
                 sprints={sprints}
+                selected={selectedStoryIds.includes(story.id)}
+                onToggleSelect={() => toggleStorySelection(story.id)}
               />
             ))}
           </div>
         </DragDropProvider>
+      )}
+
+      {/* Load more */}
+      {hasMore && (
+        <div className="flex justify-center pt-2">
+          <button
+            onClick={() => changePageSize(pageSize + 50)}
+            className="px-4 py-2 text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-600 rounded-xl transition-colors"
+          >
+            Load more ({totalStories - initialStories.length} remaining)
+          </button>
+        </div>
       )}
 
       {/* Unlinked Tasks */}
@@ -362,36 +547,6 @@ export function BacklogList({
             Tasks not linked to any story or sprint
           </p>
 
-          {/* Bulk action toolbar */}
-          {hasSelections && (
-            <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-gray-700 bg-gray-800/60">
-              <span className="text-sm text-gray-300">
-                {selectedTaskIds.length} task{selectedTaskIds.length !== 1 ? "s" : ""} selected
-              </span>
-              <button
-                onClick={selectAllTasks}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors"
-              >
-                <CheckSquareIcon className="w-3.5 h-3.5" />
-                Select All
-              </button>
-              <button
-                onClick={deselectAllTasks}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors"
-              >
-                <XSquareIcon className="w-3.5 h-3.5" />
-                Deselect All
-              </button>
-              <button
-                onClick={() => setDeleteDialogOpen(true)}
-                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-400 bg-red-900/20 border border-red-500/30 rounded-lg hover:bg-red-900/40 transition-colors"
-              >
-                <Trash2Icon className="w-3.5 h-3.5" />
-                Delete Selected
-              </button>
-            </div>
-          )}
-
           <div className="divide-y divide-gray-800/50">
             {initialUnlinkedTasks.map((t) => {
               const tStatus = taskStatusConfig[t.status] ?? taskStatusConfig.open;
@@ -401,26 +556,10 @@ export function BacklogList({
 
               const rowContent = (
                 <>
-                  {/* Checkbox */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toggleTaskSelection(t.id);
-                    }}
-                    className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
-                      isSelected
-                        ? "bg-red-500 border-red-500"
-                        : "border-gray-600 hover:border-gray-400"
-                    }`}
-                  >
-                    {isSelected && (
-                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </button>
+                  <SelectionCheckbox
+                    selected={isSelected}
+                    onToggle={() => toggleTaskSelection(t.id)}
+                  />
                   <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border ${tStatus.bg} ${tStatus.text} ${tStatus.border}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${tStatus.dot}`} />
                     {tStatus.label}
@@ -445,7 +584,7 @@ export function BacklogList({
                 </>
               );
 
-              if (hasSelections) {
+              if (hasAnySelection) {
                 return (
                   <div
                     key={t.id}
@@ -475,30 +614,95 @@ export function BacklogList({
         </div>
       )}
 
-      {/* Bulk delete confirmation dialogue */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              Delete {selectedTaskIds.length} task{selectedTaskIds.length !== 1 ? "s" : ""}?
-            </DialogTitle>
-            <DialogDescription>
-              This will permanently delete the selected tasks, their subtasks, notes, and notifications.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>
-              Cancel
-            </DialogClose>
-            <Button
-              variant="destructive"
-              onClick={handleBulkDelete}
-              disabled={isDeleting}
-            >
-              <Trash2Icon className="w-4 h-4" />
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
+      {/* Two-step bulk delete confirmation dialogue */}
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteDialogOpen(false);
+            setDeleteStep(1);
+          }
+        }}
+      >
+        <DialogContent className={deleteStep === 2 ? "sm:max-w-lg" : "sm:max-w-md"}>
+          {deleteStep === 1 ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-red-400">
+                  <AlertTriangleIcon className="w-5 h-5" />
+                  Confirm Deletion
+                </DialogTitle>
+                <DialogDescription>
+                  You are about to permanently delete:
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-1.5 text-sm">
+                {hasStorySelections && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-red-400 font-medium">
+                      {selectedStoryIds.length} {selectedStoryIds.length === 1 ? "story" : "stories"}
+                    </span>
+                  </div>
+                )}
+                {hasStorySelections && totalTasksInSelectedStories > 0 && (
+                  <div className="flex items-start gap-2 text-amber-400">
+                    <AlertTriangleIcon className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      {totalTasksInSelectedStories} {totalTasksInSelectedStories === 1 ? "task" : "tasks"} inside
+                      {totalTasksInSelectedStories === 1 ? " that story" : " those stories"}, plus all subtasks and notes
+                    </span>
+                  </div>
+                )}
+                {hasTaskSelections && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-red-400 font-medium">
+                      {selectedTaskIds.length} unlinked {selectedTaskIds.length === 1 ? "task" : "tasks"}
+                    </span>
+                    <span className="text-gray-500">and their subtasks/notes</span>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <DialogClose render={<Button variant="outline" />}>
+                  Cancel
+                </DialogClose>
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteStep(2)}
+                >
+                  Continue
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col items-center text-center py-4 space-y-4">
+                <span className="text-7xl">💀</span>
+                <h2 className="text-2xl font-bold text-red-400 tracking-wide">
+                  HERE BE DRAGONS !!!
+                </h2>
+                <p className="text-sm text-gray-400 max-w-sm">
+                  All selected stories, their tasks, subtasks, notes, and notifications will be
+                  <span className="text-red-400 font-semibold"> permanently destroyed</span>.
+                  There is no undo. Are you absolutely sure?
+                </p>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDeleteStep(1)}>
+                  Go Back
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleBulkDelete}
+                  disabled={isDeleting}
+                  className="text-base px-6 py-3"
+                >
+                  <Trash2Icon className="w-5 h-5" />
+                  {isDeleting ? "Deleting..." : "Delete Everything"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

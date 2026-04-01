@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BookOpenIcon, UnlinkIcon } from "lucide-react";
 import {
@@ -9,35 +9,79 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { RemoveFromSprintDialog } from "./remove-from-sprint-dialog";
+
+type Product = { id: string; name: string; color: string };
 
 export function TaskActions({
   taskId,
   taskTitle,
   sprintId,
+  userStoryId,
   subtaskCount,
 }: {
   taskId: string;
   taskTitle: string;
   sprintId: string | null;
+  userStoryId?: string | null;
   subtaskCount: number;
 }) {
   const router = useRouter();
   const [removing, setRemoving] = useState(false);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState("");
+
+  useEffect(() => {
+    if (convertOpen && products.length === 0) {
+      fetch("/api/products")
+        .then((res) => res.json())
+        .then((data) => {
+          setProducts(data);
+          if (data.length > 0) setSelectedProductId(data[0].id);
+        });
+    }
+  }, [convertOpen, products.length]);
 
   async function handleRemoveFromSprint() {
-    setRemoving(true);
-    try {
-      const res = await fetch(`/api/tasks/${taskId}/remove-from-sprint`, {
-        method: "POST",
-      });
-      if (res.ok) {
-        router.refresh();
+    if (userStoryId) {
+      // Linked to a story — just detach from sprint
+      setRemoving(true);
+      try {
+        const res = await fetch(`/api/tasks/${taskId}/remove-from-sprint`, {
+          method: "POST",
+        });
+        if (res.ok) {
+          router.refresh();
+        }
+      } finally {
+        setRemoving(false);
       }
-    } finally {
-      setRemoving(false);
+    } else {
+      // Orphan task — show dialogue
+      setRemoveDialogOpen(true);
     }
+  }
+
+  async function handleRemoveToBacklog(productId: string) {
+    const res = await fetch(`/api/tasks/${taskId}/convert-to-story`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId, removeFromSprint: true }),
+    });
+    const result = await res.json();
+    setRemoveDialogOpen(false);
+    if (result.success && result.storyId) {
+      router.push(`/stories/${result.storyId}`);
+    }
+  }
+
+  async function handleRemoveAndDelete() {
+    await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+    setRemoveDialogOpen(false);
+    router.push("/");
   }
 
   async function handleConvertToStory() {
@@ -45,6 +89,8 @@ export function TaskActions({
     try {
       const res = await fetch(`/api/tasks/${taskId}/convert-to-story`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: selectedProductId || undefined }),
       });
       const result = await res.json();
       if (result.success && result.storyId) {
@@ -92,6 +138,24 @@ export function TaskActions({
               Convert <span className="font-medium text-white">{taskTitle}</span> into a user story?
             </p>
 
+            {/* Product / Backlog picker */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                Product Backlog
+              </label>
+              <select
+                value={selectedProductId}
+                onChange={(e) => setSelectedProductId(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+              >
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="space-y-2 text-sm text-gray-400">
               <p>This will:</p>
               <ul className="list-disc list-inside space-y-1 ml-2">
@@ -118,7 +182,7 @@ export function TaskActions({
               <button
                 type="button"
                 onClick={handleConvertToStory}
-                disabled={converting}
+                disabled={converting || !selectedProductId}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-500 rounded-xl transition-colors disabled:opacity-50"
               >
                 <BookOpenIcon className="w-4 h-4" />
@@ -128,6 +192,14 @@ export function TaskActions({
           </div>
         </DialogContent>
       </Dialog>
+
+      <RemoveFromSprintDialog
+        taskTitle={taskTitle}
+        open={removeDialogOpen}
+        onOpenChange={setRemoveDialogOpen}
+        onMoveToBacklog={handleRemoveToBacklog}
+        onDelete={handleRemoveAndDelete}
+      />
     </>
   );
 }

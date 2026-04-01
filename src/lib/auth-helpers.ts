@@ -21,3 +21,21 @@ export async function requireAuth() {
     session,
   };
 }
+
+/**
+ * Requires the user to be authenticated AND have the admin role.
+ * Returns a 403 NextResponse if not admin.
+ */
+export async function requireAdmin() {
+  const authResult = await requireAuth();
+  if (!authResult.authenticated) return authResult;
+
+  if (authResult.session.user.role !== "admin") {
+    return {
+      authenticated: false as const,
+      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+    };
+  }
+
+  return authResult;
+}

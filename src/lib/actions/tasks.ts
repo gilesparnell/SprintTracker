@@ -27,6 +27,11 @@ export async function createTask(
     return { success: false, errors: parseZodErrors(parsed.error) };
   }
 
+  // Tasks must belong to either a sprint or a story to avoid orphans
+  if (!sprintId && !parsed.data.userStoryId) {
+    return { success: false, errors: { userStoryId: ["Task must belong to a sprint or a story"] } };
+  }
+
   const id = uuid();
   const now = new Date().toISOString();
   const sequenceNumber = await getNextSequenceNumber(db, "task");
@@ -230,7 +235,14 @@ export async function deleteTask(
 export async function removeTaskFromSprint(
   db: DB,
   id: string
-): Promise<{ success: boolean }> {
+): Promise<{ success: boolean; error?: string }> {
+  // Only allow removal if the task has a story (otherwise it becomes an orphan)
+  const task = await db.select().from(tasks).where(eq(tasks.id, id)).get();
+  if (!task) return { success: false, error: "Task not found" };
+  if (!task.userStoryId) {
+    return { success: false, error: "Cannot remove orphan task from sprint — move to backlog or delete instead" };
+  }
+
   await db
     .update(tasks)
     .set({ sprintId: null, updatedAt: new Date().toISOString() })
@@ -247,7 +259,9 @@ const taskToStoryStatusMap: Record<string, string> = {
 export async function convertTaskToStory(
   db: DB,
   taskId: string,
-  userId: string
+  userId: string,
+  productId?: string,
+  removeFromSprint?: boolean
 ): Promise<{ success: boolean; storyId?: string }> {
   const task = await db.select().from(tasks).where(eq(tasks.id, taskId)).get();
   if (!task) return { success: false };
@@ -270,12 +284,13 @@ export async function convertTaskToStory(
     title: task.title,
     description: task.description,
     priority: task.priority as "low" | "medium" | "high" | "urgent",
-    status: (taskToStoryStatusMap[task.status] ?? "backlog") as "backlog" | "in_sprint" | "done",
+    status: removeFromSprint ? "backlog" : ((taskToStoryStatusMap[task.status] ?? "backlog") as "backlog" | "in_sprint" | "done"),
     sortOrder,
     assignedTo: task.assignedTo,
     createdBy: userId,
-    sprintId: task.sprintId,
+    sprintId: removeFromSprint ? null : task.sprintId,
     customerId: task.customerId,
+    productId: productId ?? null,
     createdAt: now,
     updatedAt: now,
   });

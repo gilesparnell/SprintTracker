@@ -210,6 +210,13 @@ export async function deleteStory(
   return { success: true, data: { deleted: true } };
 }
 
+export type StoriesResult = {
+  stories: StoryWithTaskCount[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export async function getStories(
   db: DB,
   filters?: {
@@ -219,8 +226,10 @@ export async function getStories(
     sprintId?: string;
     productId?: string;
     type?: string;
+    page?: number;
+    pageSize?: number;
   }
-): Promise<StoryWithTaskCount[]> {
+): Promise<StoriesResult> {
   // Build WHERE conditions
   const conditions = [];
   if (filters?.status) {
@@ -244,6 +253,17 @@ export async function getStories(
 
   const whereClause =
     conditions.length > 0 ? and(...conditions) : undefined;
+
+  const page = filters?.page ?? 1;
+  const pageSize = filters?.pageSize ?? 50;
+
+  // Get total count
+  const countResult = await db
+    .select({ count: sql<number>`COUNT(DISTINCT ${userStories.id})` })
+    .from(userStories)
+    .where(whereClause)
+    .get();
+  const total = countResult?.count ?? 0;
 
   const rows = await db
     .select({
@@ -269,9 +289,11 @@ export async function getStories(
     .where(whereClause)
     .groupBy(userStories.id)
     .orderBy(asc(userStories.sortOrder))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize)
     .all();
 
-  return rows;
+  return { stories: rows, total, page, pageSize };
 }
 
 export async function getStoryById(db: DB, id: string) {

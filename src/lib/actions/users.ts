@@ -66,6 +66,59 @@ export async function deactivateUser(db: DB, id: string) {
   return { success: true };
 }
 
+export async function updateUser(
+  db: DB,
+  id: string,
+  data: {
+    name?: string | null;
+    username?: string | null;
+    role?: "admin" | "user";
+    status?: "active" | "inactive";
+  }
+): Promise<{ error: string } | (typeof users.$inferSelect)> {
+  const existing = await db.select().from(users).where(eq(users.id, id)).get();
+  if (!existing) {
+    return { error: "User not found" };
+  }
+
+  // Check username uniqueness (if changing)
+  if (data.username !== undefined && data.username !== null && data.username !== existing.username) {
+    const taken = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, data.username))
+      .get();
+    if (taken) {
+      return { error: "Username already taken" };
+    }
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (data.name !== undefined) updates.name = data.name;
+  if (data.username !== undefined) updates.username = data.username;
+  if (data.role !== undefined) updates.role = data.role;
+  if (data.status !== undefined) updates.status = data.status;
+
+  if (Object.keys(updates).length > 0) {
+    await db.update(users).set(updates).where(eq(users.id, id));
+  }
+
+  return (await db.select().from(users).where(eq(users.id, id)).get())!;
+}
+
+export async function deleteUser(
+  db: DB,
+  id: string
+): Promise<{ success: true } | { error: string }> {
+  const existing = await db.select().from(users).where(eq(users.id, id)).get();
+  if (!existing) {
+    return { error: "User not found" };
+  }
+
+  await db.delete(users).where(eq(users.id, id));
+  return { success: true };
+}
+
 // ─── Whitelist ──────────────────────────────────────────────
 
 export async function isEmailAllowed(db: DB, email: string): Promise<boolean> {

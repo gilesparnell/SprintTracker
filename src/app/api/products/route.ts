@@ -18,6 +18,6 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const result = await createProduct(db, body);
-  if (result.success) revalidateTag("sidebar", "seconds");
+  if (result.success) revalidateTag("sidebar", { expire: 0 });
   return NextResponse.json(result);
 }

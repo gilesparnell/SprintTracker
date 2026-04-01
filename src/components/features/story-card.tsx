@@ -126,13 +126,19 @@ export function StoryCard({
           );
         })()}
 
-        {/* Title */}
+        {/* Title + task count */}
         <Link
           href={`/stories/${story.id}`}
           className="text-sm text-white hover:text-green-400 transition-colors truncate min-w-0 flex-1"
         >
           {story.title}
         </Link>
+        {story.taskCount > 0 && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded border border-gray-700 bg-gray-800 text-gray-300 shrink-0">
+            <ListTodoIcon className="w-3 h-3 text-gray-400" />
+            {story.taskCount}
+          </span>
+        )}
 
         {/* Metadata badges — right side */}
         <div className="flex items-center gap-1.5 shrink-0">
@@ -151,14 +157,6 @@ export function StoryCard({
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full border border-purple-500/30 bg-purple-900/20 text-purple-300">
               <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: customer.color }} />
               {customer.name}
-            </span>
-          )}
-
-          {/* Task count — only shown when story has tasks */}
-          {story.taskCount > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded border border-gray-700 bg-gray-800 text-gray-300">
-              <ListTodoIcon className="w-3 h-3 text-gray-400" />
-              {story.taskCount}
             </span>
           )}
 

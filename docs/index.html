@@ -31,7 +31,7 @@
 
     /* Mesh background */
     .mesh-bg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
-    .mesh-bg .blob{position:absolute;border-radius:50%;filter:blur(90px);will-change:transform}
+    .mesh-bg .blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:0.5;will-change:transform}
     .mesh-bg .blob:nth-child(1){width:650px;height:650px;background:hsla(168,55%,32%,0.35);top:-12%;left:-8%;animation:d1 20s ease-in-out infinite alternate}
     .mesh-bg .blob:nth-child(2){width:500px;height:500px;background:hsla(335,45%,28%,0.25);top:5%;right:-12%;animation:d2 24s ease-in-out infinite alternate}
     .mesh-bg .blob:nth-child(3){width:580px;height:580px;background:hsla(215,55%,28%,0.28);bottom:-18%;left:25%;animation:d3 28s ease-in-out infinite alternate}
@@ -72,33 +72,30 @@
 
     /* Section labels */
     .section-label{font-family:var(--font-body);font-size:0.65rem;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:1.25rem;padding-left:2px}
-    .section-gap{margin-top:2.5rem}
 
     /* Bento grid */
     .bento{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 
     /* Glass card */
-    .card{background:rgba(255,255,255,0.035);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius);padding:1.6rem;position:relative;overflow:hidden;display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:transform 0.45s cubic-bezier(0.16,1,0.3,1),box-shadow 0.45s cubic-bezier(0.16,1,0.3,1),border-color 0.4s ease}
-    .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);pointer-events:none}
-    .card::after{content:'';position:absolute;width:350px;height:350px;background:radial-gradient(circle,var(--card-glow,var(--accent-glow)) 0%,transparent 70%);border-radius:50%;pointer-events:none;opacity:0;transition:opacity 0.4s ease;top:var(--mouse-y,50%);left:var(--mouse-x,50%);transform:translate(-50%,-50%)}
+    .card{background:rgba(18,21,28,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius);padding:1.6rem;position:relative;overflow:hidden;display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:transform 0.45s cubic-bezier(0.16,1,0.3,1),box-shadow 0.45s cubic-bezier(0.16,1,0.3,1),border-color 0.4s ease}
+    .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);pointer-events:none;z-index:2}
+    .card::after{content:'';position:absolute;width:350px;height:350px;background:radial-gradient(circle,var(--card-glow,var(--accent-glow)) 0%,transparent 70%);border-radius:50%;pointer-events:none;opacity:0;transition:opacity 0.4s ease;top:var(--mouse-y,50%);left:var(--mouse-x,50%);transform:translate(-50%,-50%);z-index:1}
     .card:hover::after{opacity:1}
     .card:hover{transform:translateY(-3px) scale(1.008);border-color:var(--border-hover);box-shadow:0 24px 64px rgba(0,0,0,0.35),0 0 48px var(--card-glow,var(--accent-muted))}
     .card--wide{grid-column:span 2}
-    .card-top{flex:1}
+    .card-top{flex:1;position:relative;z-index:3}
     .card h2{font-family:var(--font-display);font-weight:700;font-size:1.15rem;line-height:1.2;letter-spacing:-0.025em;margin-bottom:0.5rem}
     .card p{color:var(--text-secondary);font-size:0.88rem;line-height:1.6}
-    .card-footer{margin-top:auto;padding-top:1.25rem;display:flex;align-items:center;justify-content:space-between}
+    .card-footer{margin-top:auto;padding-top:1.25rem;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:3}
     .card-link{display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-weight:500;font-size:0.85rem;transition:gap 0.3s ease,color 0.3s ease}
     .card-link:hover{gap:10px;color:var(--accent-light)}
     .card-icon{font-size:1.5rem;margin-bottom:0.75rem;display:block}
     .card-count{font-size:0.7rem;font-weight:600;letter-spacing:0.06em;color:var(--text-tertiary);background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:100px;padding:2px 10px}
 
-    /* Doc list inside cards */
-    .doc-list{list-style:none;margin-top:0.75rem;display:flex;flex-direction:column;gap:6px}
-    .doc-list li{font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:8px}
+    /* Doc list inside cards — plain text, no links */
+    .doc-list{list-style:none;margin-top:0.75rem;display:flex;flex-direction:column;gap:4px}
+    .doc-list li{font-size:0.78rem;color:var(--text-secondary);display:flex;align-items:center;gap:8px}
     .doc-list li::before{content:'';width:4px;height:4px;background:var(--accent);border-radius:50%;flex-shrink:0}
-    .doc-list a{color:var(--accent);text-decoration:none;transition:color 0.2s}
-    .doc-list a:hover{color:var(--accent-light)}
 
     /* Footer */
     .site-footer{margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:0.78rem;color:var(--text-tertiary)}
@@ -134,7 +131,7 @@
     </a>
     <nav class="header-links">
       <a href="https://gilesparnell.github.io/">Hub Portal</a>
-      <a href="https://github.com/gilesparnell/SprintTracker">
+      <a href="https://github.com/gilesparnell/SprintTracker" target="_blank">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
       </a>
@@ -149,39 +146,33 @@
     <h1>Sprint Tracker</h1>
     <p class="tagline">Sprint planning and progress tracking tool with ClickUp sync, multi-user support, and product/issue-type management. Built with Next.js.</p>
     <div class="stats-row">
-      <div class="stat"><span class="stat-value">5</span><span class="stat-label">Build Plans</span></div>
+      <div class="stat"><span class="stat-value">4</span><span class="stat-label">Build Plans</span></div>
       <div class="stat"><span class="stat-value">2</span><span class="stat-label">Requirements</span></div>
       <div class="stat"><span class="stat-value">1</span><span class="stat-label">User Guide</span></div>
       <div class="stat"><span class="stat-value">1</span><span class="stat-label">Diagram</span></div>
     </div>
   </section>
 
-  <!-- ==========================================
-       DOCUMENTATION SECTIONS
-       ========================================== -->
   <div class="section-label">Documentation</div>
   <div class="bento">
 
     <!-- Build Plans -->
-    <a href="plans/2026-04-01-002-feat-sprint-tracker-roadmap-plan.md" class="card card--wide" style="--card-glow:var(--accent-glow)">
+    <div class="card card--wide" style="--card-glow:var(--accent-glow)">
       <div class="card-top">
         <span class="card-icon">&#128203;</span>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
           <h2>Build Plans</h2>
-          <span class="card-count">5 plans</span>
+          <span class="card-count">4 plans</span>
         </div>
         <p>Implementation plans with waves, dependencies, and verification criteria.</p>
         <ul class="doc-list">
-          <li><a href="plans/2026-04-01-002-feat-sprint-tracker-roadmap-plan.md">Product Roadmap Plan</a></li>
-          <li><a href="plans/2026-04-01-001-feat-products-issue-types-sidebar-restructure-plan.md">Products &amp; Issue Types Restructure</a></li>
-          <li><a href="plans/2026-03-30-001-feat-multi-user-sprint-tracker-beta-plan.md">Multi-User Beta</a></li>
-          <li><a href="plans/2026-03-27-001-feat-sprint-tracker-clickup-sync-beta-plan.md">ClickUp Sync Beta</a></li>
+          <li>Product Roadmap Plan</li>
+          <li>Products &amp; Issue Types Restructure</li>
+          <li>Multi-User Beta</li>
+          <li>ClickUp Sync Beta</li>
         </ul>
       </div>
-      <div class="card-footer">
-        <span class="card-link">View all plans <span>&rarr;</span></span>
-      </div>
-    </a>
+    </div>
 
     <!-- Project Tracking -->
     <a href="diagrams/plan-progress.html" class="card" style="--card-glow:rgba(52,211,153,0.2)">
@@ -196,7 +187,7 @@
     </a>
 
     <!-- Requirements / Brainstorms -->
-    <a href="brainstorms/2026-04-01-products-issue-types-requirements.md" class="card" style="--card-glow:rgba(167,139,250,0.2)">
+    <div class="card" style="--card-glow:rgba(167,139,250,0.2)">
       <div class="card-top">
         <span class="card-icon">&#128161;</span>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
@@ -205,14 +196,11 @@
         </div>
         <p>PRDs, feature specs, and discovery brainstorms.</p>
         <ul class="doc-list">
-          <li><a href="brainstorms/2026-04-01-products-issue-types-requirements.md">Products &amp; Issue Types</a></li>
-          <li><a href="brainstorms/2026-03-30-multi-user-sprint-tracker-requirements.md">Multi-User Requirements</a></li>
+          <li>Products &amp; Issue Types</li>
+          <li>Multi-User Requirements</li>
         </ul>
       </div>
-      <div class="card-footer">
-        <span class="card-link">View requirements <span>&rarr;</span></span>
-      </div>
-    </a>
+    </div>
 
     <!-- User Guide -->
     <a href="user-guide.html" class="card" style="--card-glow:rgba(97,153,230,0.2)">
@@ -233,9 +221,6 @@
         <h2>Design Docs</h2>
         <p>Architecture diagrams, system design, and data models. Coming soon.</p>
       </div>
-      <div class="card-footer">
-        <span class="card-link" style="color:var(--text-tertiary)">Not yet created</span>
-      </div>
     </div>
 
     <!-- API Reference (placeholder) -->
@@ -244,9 +229,6 @@
         <span class="card-icon">&#128268;</span>
         <h2>API Reference</h2>
         <p>Endpoint documentation, request/response schemas, and authentication. Coming soon.</p>
-      </div>
-      <div class="card-footer">
-        <span class="card-link" style="color:var(--text-tertiary)">Not yet created</span>
       </div>
     </div>
 
@@ -259,7 +241,7 @@
       &nbsp;&middot;&nbsp;
       <a href="https://gilesparnell.github.io/Claude/">Knowledge Portal</a>
       &nbsp;&middot;&nbsp;
-      <a href="https://github.com/gilesparnell/SprintTracker">GitHub</a>
+      <a href="https://github.com/gilesparnell/SprintTracker" target="_blank">GitHub</a>
     </span>
   </footer>
 

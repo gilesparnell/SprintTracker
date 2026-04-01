@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint Tracker — Plan Progress</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:         #0f1117;
+    --surface:    #151821;
+    --border:     #1e293b;
+    --text1:      #e2e8f0;
+    --text2:      #94a3b8;
+    --text3:      #475569;
+    --mono:       'SF Mono', Menlo, monospace;
+
+    --green-bg:     #0a1f14; --green-border:  #059669; --green-text:  #34d399;
+    --amber-bg:     #1a1208; --amber-border:  #d97706; --amber-text:  #fbbf24;
+    --blue-bg:      #0f1a2e; --blue-border:   #3b82f6; --blue-text:   #60a5fa;
+    --purple-bg:    #1a1035; --purple-border: #6d28d9; --purple-text: #a78bfa;
+    --teal-bg:      #051a18; --teal-border:   #0d9488; --teal-text:   #2dd4bf;
+    --slate-bg:     #111827; --slate-border:  #374151; --slate-text:  #9ca3af;
+    --rose-bg:      #1a0808; --rose-border:   #e11d48; --rose-text:   #fb7185;
+    --coral-bg:     #1a0f08; --coral-border:  #ea580c; --coral-text:  #fb923c;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text1);
+    min-height: 100vh;
+    padding: 40px 24px 80px;
+  }
+
+  .page-title {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .page-subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text3);
+    margin-bottom: 12px;
+  }
+  .page-date {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+    margin-bottom: 40px;
+  }
+
+  .diagram { max-width: 1100px; margin: 0 auto; }
+
+  /* ── OVERALL PROGRESS BAR ── */
+  .progress-summary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 36px;
+  }
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+  }
+  .progress-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+  }
+  .progress-pct {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--green-text);
+    font-family: var(--mono);
+  }
+  .progress-bar-track {
+    width: 100%;
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+  }
+  .progress-stats {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .progress-stat {
+    font-size: 11px;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .stat-dot.done { background: var(--green-text); }
+  .stat-dot.progress { background: var(--amber-text); }
+  .stat-dot.todo { background: var(--slate-text); }
+
+  /* ── WORKSTREAM CARDS ── */
+  .workstreams {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+
+  .ws-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .ws-band {
+    padding: 16px 20px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .ws-id {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 2px;
+  }
+  .ws-name {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .ws-pct {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+  .ws-bar-track {
+    height: 3px;
+    background: var(--border);
+    margin: 0 20px;
+  }
+  .ws-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s;
+  }
+
+  .ws-tasks {
+    padding: 14px 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .task {
+    font-size: 11px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.4;
+  }
+  .task-icon {
+    flex-shrink: 0;
+    font-size: 12px;
+    margin-top: 1px;
+  }
+  .task-text { color: var(--text2); }
+  .task.done .task-text { color: var(--green-text); text-decoration: line-through; opacity: 0.7; }
+  .task.progress .task-text { color: var(--amber-text); }
+
+  /* Colour variants */
+  .ws-green  { border-color: var(--green-border); }
+  .ws-green .ws-band { background: var(--green-bg); }
+  .ws-green .ws-id, .ws-green .ws-name, .ws-green .ws-pct { color: var(--green-text); }
+  .ws-green .ws-bar-fill { background: var(--green-text); }
+
+  .ws-amber  { border-color: var(--amber-border); }
+  .ws-amber .ws-band { background: var(--amber-bg); }
+  .ws-amber .ws-id, .ws-amber .ws-name, .ws-amber .ws-pct { color: var(--amber-text); }
+  .ws-amber .ws-bar-fill { background: var(--amber-text); }
+
+  .ws-blue   { border-color: var(--blue-border); }
+  .ws-blue .ws-band { background: var(--blue-bg); }
+  .ws-blue .ws-id, .ws-blue .ws-name, .ws-blue .ws-pct { color: var(--blue-text); }
+  .ws-blue .ws-bar-fill { background: var(--blue-text); }
+
+  .ws-purple { border-color: var(--purple-border); }
+  .ws-purple .ws-band { background: var(--purple-bg); }
+  .ws-purple .ws-id, .ws-purple .ws-name, .ws-purple .ws-pct { color: var(--purple-text); }
+  .ws-purple .ws-bar-fill { background: var(--purple-text); }
+
+  .ws-teal   { border-color: var(--teal-border); }
+  .ws-teal .ws-band { background: var(--teal-bg); }
+  .ws-teal .ws-id, .ws-teal .ws-name, .ws-teal .ws-pct { color: var(--teal-text); }
+  .ws-teal .ws-bar-fill { background: var(--teal-text); }
+
+  .ws-slate  { border-color: var(--slate-border); }
+  .ws-slate .ws-band { background: var(--slate-bg); }
+  .ws-slate .ws-id, .ws-slate .ws-name, .ws-slate .ws-pct { color: var(--slate-text); }
+  .ws-slate .ws-bar-fill { background: var(--slate-text); }
+
+  .ws-coral  { border-color: var(--coral-border); }
+  .ws-coral .ws-band { background: var(--coral-bg); }
+  .ws-coral .ws-id, .ws-coral .ws-name, .ws-coral .ws-pct { color: var(--coral-text); }
+  .ws-coral .ws-bar-fill { background: var(--coral-text); }
+
+  .ws-rose   { border-color: var(--rose-border); }
+  .ws-rose .ws-band { background: var(--rose-bg); }
+  .ws-rose .ws-id, .ws-rose .ws-name, .ws-rose .ws-pct { color: var(--rose-text); }
+  .ws-rose .ws-bar-fill { background: var(--rose-text); }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    font-size: 11px;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── NAV LINKS ── */
+  .nav-links {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .nav-link {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--blue-text);
+    background: var(--blue-bg);
+    border: 1px solid var(--blue-border);
+    padding: 6px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+  .nav-link:hover { opacity: 0.8; }
+  .nav-link.teal {
+    color: var(--teal-text);
+    background: var(--teal-bg);
+    border-color: var(--teal-border);
+  }
+  .nav-link.purple {
+    color: var(--purple-text);
+    background: var(--purple-bg);
+    border-color: var(--purple-border);
+  }
+</style>
+</head>
+<body>
+
+<div class="diagram">
+  <div class="page-title">Sprint Tracker</div>
+  <div class="page-subtitle">Development Plan Progress</div>
+  <div class="page-date">Last updated: 2026-04-01</div>
+
+  <div class="nav-links">
+    <a class="nav-link teal" href="../user-guide.html">&#128214; User Guide</a>
+    <a class="nav-link purple" href="../plans/2026-04-01-002-feat-sprint-tracker-roadmap-plan.md">&#128506; Roadmap Plan</a>
+    <a class="nav-link" href="../plan.md">&#9745; Full Checklist</a>
+  </div>
+
+  <!-- ── OVERALL PROGRESS ── -->
+  <!-- 88 done / 100 total = 88% -->
+  <div class="progress-summary">
+    <div class="progress-header">
+      <span class="progress-label">Overall Plan Completion</span>
+      <span class="progress-pct">88%</span>
+    </div>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" style="width: 88%; background: linear-gradient(90deg, var(--green-text), var(--teal-text))"></div>
+    </div>
+    <div class="progress-stats">
+      <div class="progress-stat"><span class="stat-dot done"></span> 88 tasks done</div>
+      <div class="progress-stat"><span class="stat-dot todo"></span> 12 remaining</div>
+    </div>
+  </div>
+
+  <!-- ── WORKSTREAM CARDS ── -->
+  <div class="workstreams">
+
+    <!-- W1: Core Infrastructure & Auth — 8/8 = 100% -->
+    <div class="ws-card ws-green">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W1 &middot; Foundation</div>
+          <div class="ws-name">Core Infrastructure & Auth</div>
+        </div>
+        <div class="ws-pct">100%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:100%"></div></div>
+      <div class="ws-tasks">
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Database schema (SQLite/Turso + Drizzle ORM)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">NextAuth v5 with Google OAuth + dev credentials</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Email whitelist system</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">User roles (admin/user) + status (active/inactive)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Admin-seeded migration</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">JWT session with cached user status (60s TTL)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">requireAuth() + requireAdmin() middleware</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Stale JWT self-healing (DB fallback)</span></div>
+      </div>
+    </div>
+
+    <!-- W2: Sprint Management — 6/6 = 100% -->
+    <div class="ws-card ws-green">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W2 &middot; Core</div>
+          <div class="ws-name">Sprint Management</div>
+        </div>
+        <div class="ws-pct">100%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:100%"></div></div>
+      <div class="ws-tasks">
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Sprint CRUD (create, read, update, delete)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Sprint statuses (planning, active, completed)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Sprint folders for organisation</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Sprint detail page with task views</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Sprint goal tracking</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Sprint date management</span></div>
+      </div>
+    </div>
+
+    <!-- W3: User Stories & Backlog — 8/8 = 100% -->
+    <div class="ws-card ws-green">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W3 &middot; Core</div>
+          <div class="ws-name">User Stories & Backlog</div>
+        </div>
+        <div class="ws-pct">100%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:100%"></div></div>
+      <div class="ws-tasks">
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Story CRUD with sequence numbers (S-1, S-2...)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Story types (user_story, feature_request, bug)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Backlog page with pagination</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Move stories to/from sprints</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Drag-and-drop story reordering</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Story detail page with child tasks</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Story deletion modes (cascade, unlink, reassign)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Product-filtered backlog views</span></div>
+      </div>
+    </div>
+
+    <!-- W4: Task Management — 9/9 = 100% -->
+    <div class="ws-card ws-green">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W4 &middot; Core</div>
+          <div class="ws-name">Task Management</div>
+        </div>
+        <div class="ws-pct">100%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:100%"></div></div>
+      <div class="ws-tasks">
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Task CRUD with sequence numbers (T-1, T-2...)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Task statuses (open, in_progress, done)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Task priorities (low, medium, high, urgent)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Task assignment to users</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Task detail page with subtasks and notes</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Kanban board view (columns by status)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">List view with filters</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Convert task to story</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Remove task from sprint</span></div>
+      </div>
+    </div>
+
+    <!-- W5: Subtasks — 4/4 = 100% -->
+    <div class="ws-card ws-green">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W5 &middot; Core</div>
+          <div class="ws-name">Subtasks</div>
+        </div>
+        <div class="ws-pct">100%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:100%"></div></div>
+      <div class="ws-tasks">
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Subtask CRUD with sequence numbers (ST-1, ST-2...)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Inherit parent task assignee on creation</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Move subtask between parent tasks</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Subtask status updates</span></div>
+      </div>
+    </div>
+
+    <!-- W6: Notes & Comments — 5/5 = 100% -->
+    <div class="ws-card ws-green">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W6 &middot; Collaboration</div>
+          <div class="ws-name">Notes & Comments</div>
+        </div>
+        <div class="ws-pct">100%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:100%"></div></div>
+      <div class="ws-tasks">
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Polymorphic notes (story/task/subtask)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">5-minute edit window</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Author ownership enforcement</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Note deletion with author check</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Cascade delete with parent entities</span></div>
+      </div>
+    </div>
+
+    <!-- W7: Notification System — 10/10 = 100% -->
+    <div class="ws-card ws-green">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W7 &middot; Collaboration</div>
+          <div class="ws-name">Notification System</div>
+        </div>
+        <div class="ws-pct">100%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:100%"></div></div>
+      <div class="ws-tasks">
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Assignment notifications (story/task/subtask)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Reassignment notifications</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Note-added notifications</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Self-notification suppression</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">30-second deduplication window</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Notification bell with unread badge (30s polling)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Mark as read / mark all as read</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">User isolation (ownership check)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Cascade delete on entity deletion</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Email templates (Resend integration)</span></div>
+      </div>
+    </div>
+
+    <!-- W8: Products & Categorisation — 8/8 = 100% -->
+    <div class="ws-card ws-green">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W8 &middot; Organisation</div>
+          <div class="ws-name">Products & Categorisation</div>
+        </div>
+        <div class="ws-pct">100%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:100%"></div></div>
+      <div class="ws-tasks">
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Product CRUD with colour picker</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">2-level product hierarchy (parent/child)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Product backlog pages</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Sidebar product tree with backlog counts</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Tags system with colour coding</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Tag management in settings</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Customer management with colours</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Task-tag many-to-many association</span></div>
+      </div>
+    </div>
+
+    <!-- W9: Admin Panel — 7/7 = 100% -->
+    <div class="ws-card ws-green">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W9 &middot; Admin</div>
+          <div class="ws-name">Admin Panel</div>
+        </div>
+        <div class="ws-pct">100%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:100%"></div></div>
+      <div class="ws-tasks">
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Admin-only page with role gating</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">User listing with roles and status</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Inline user editing (name, username, role)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Toggle user active/inactive</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Two-step delete confirmation</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Self-deletion prevention</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Whitelist management (add/remove emails)</span></div>
+      </div>
+    </div>
+
+    <!-- W10: ClickUp Integration — 5/6 = 83% -->
+    <div class="ws-card ws-amber">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W10 &middot; Integration</div>
+          <div class="ws-name">ClickUp Integration</div>
+        </div>
+        <div class="ws-pct">83%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:83%"></div></div>
+      <div class="ws-tasks">
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">API token configuration</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Space/folder/list browser</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Link sprint to ClickUp list</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Push tasks to ClickUp (one-way sync)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Sync log page for debugging</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">Bidirectional sync (pull from ClickUp)</span></div>
+      </div>
+    </div>
+
+    <!-- W11: UI/UX & Polish — 9/11 = 82% -->
+    <div class="ws-card ws-amber">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W11 &middot; Polish</div>
+          <div class="ws-name">UI/UX & Polish</div>
+        </div>
+        <div class="ws-pct">82%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:82%"></div></div>
+      <div class="ws-tasks">
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Dark theme throughout</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Mobile responsive layout</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Sidebar navigation with active states</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">User menu with avatar</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Quick submit FAB (bug/feature)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Sprint product badges</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Sprint UI declutter (5 rows to 3)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Combined filter row with labels</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Lazy-loaded widgets (QuickSubmit, LoveNotes)</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">Drag-and-drop kanban cards</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">Keyboard shortcuts</span></div>
+      </div>
+    </div>
+
+    <!-- W12: Testing & Quality — 8/10 = 80% -->
+    <div class="ws-card ws-amber">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W12 &middot; Quality</div>
+          <div class="ws-name">Testing & Quality</div>
+        </div>
+        <div class="ws-pct">80%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:80%"></div></div>
+      <div class="ws-tasks">
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Schema validation tests</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Sprint action tests</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Task action tests</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">User action tests (14 tests)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">ClickUp client + sync tests</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Multi-user integration flow (14 tests)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Notification system integration (21 tests)</span></div>
+        <div class="task done"><span class="task-icon">&#10003;</span> <span class="task-text">Build validation test</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">E2E browser tests (Playwright)</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">API route integration tests</span></div>
+      </div>
+    </div>
+
+    <!-- W13: Search & Reporting — 0/4 = 0% -->
+    <div class="ws-card ws-slate">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W13 &middot; Future</div>
+          <div class="ws-name">Search & Reporting</div>
+        </div>
+        <div class="ws-pct">0%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:0%"></div></div>
+      <div class="ws-tasks">
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">Global search across entities</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">Sprint burndown charts</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">Velocity tracking</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">Sprint reports / retrospective view</span></div>
+      </div>
+    </div>
+
+    <!-- W14: Advanced Features — 0/7 = 0% -->
+    <div class="ws-card ws-slate">
+      <div class="ws-band">
+        <div>
+          <div class="ws-id">W14 &middot; Future</div>
+          <div class="ws-name">Advanced Features</div>
+        </div>
+        <div class="ws-pct">0%</div>
+      </div>
+      <div class="ws-bar-track"><div class="ws-bar-fill" style="width:0%"></div></div>
+      <div class="ws-tasks">
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">Bulk operations (edit/delete)</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">Sprint templates / duplication</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">File attachments on notes</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">Custom fields on entities</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">Fine-grained permissions (team-based)</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">Webhooks for external integrations</span></div>
+        <div class="task"><span class="task-icon">&#9675;</span> <span class="task-text">Archive status for stories</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── LEGEND ── -->
+  <div class="legend">
+    <div class="legend-item"><span class="stat-dot done"></span> Done</div>
+    <div class="legend-item"><span class="stat-dot todo"></span> Not Started</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint Tracker — User Guide</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117; --surface: #151821; --surface2: #1a1f2e;
+    --border: #1e293b; --border2: #2d3748;
+    --text1: #e2e8f0; --text2: #94a3b8; --text3: #475569;
+    --mono: 'SF Mono', Menlo, monospace;
+    --green: #34d399; --green-bg: #0a1f14; --green-border: #059669;
+    --amber: #fbbf24; --amber-bg: #1a1208; --amber-border: #d97706;
+    --blue: #60a5fa; --blue-bg: #0f1a2e; --blue-border: #3b82f6;
+    --purple: #a78bfa; --purple-bg: #1a1035; --purple-border: #6d28d9;
+    --teal: #2dd4bf; --teal-bg: #051a18; --teal-border: #0d9488;
+    --rose: #fb7185; --rose-bg: #1a0808; --rose-border: #e11d48;
+    --coral: #fb923c; --coral-bg: #1a0f08; --coral-border: #ea580c;
+    --slate: #9ca3af; --slate-bg: #111827; --slate-border: #374151;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg); color: var(--text1);
+    min-height: 100vh; padding: 40px 24px 80px;
+    line-height: 1.6;
+  }
+  .guide { max-width: 900px; margin: 0 auto; }
+
+  /* Header */
+  .guide-header { text-align: center; margin-bottom: 48px; }
+  .guide-header h1 {
+    font-size: 28px; font-weight: 700; color: var(--text1);
+    margin-bottom: 8px; letter-spacing: -0.02em;
+  }
+  .guide-header p { font-size: 14px; color: var(--text3); }
+  .guide-header .version {
+    display: inline-block; font-size: 10px; font-family: var(--mono);
+    color: var(--teal); background: var(--teal-bg); border: 1px solid var(--teal-border);
+    padding: 2px 8px; border-radius: 4px; margin-top: 12px;
+  }
+  .nav-links {
+    display: flex; gap: 12px; justify-content: center;
+    margin-top: 16px; flex-wrap: wrap;
+  }
+  .nav-link {
+    font-size: 12px; font-weight: 600; padding: 6px 16px;
+    border-radius: 6px; text-decoration: none; transition: opacity 0.2s;
+  }
+  .nav-link:hover { opacity: 0.8; }
+  .nav-link.green { color: var(--green); background: var(--green-bg); border: 1px solid var(--green-border); }
+  .nav-link.purple { color: var(--purple); background: var(--purple-bg); border: 1px solid var(--purple-border); }
+
+  /* TOC */
+  .toc {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px 28px; margin-bottom: 40px;
+  }
+  .toc-title { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
+  .toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+  .toc-item {
+    font-size: 13px; color: var(--blue); text-decoration: none;
+    display: flex; align-items: center; gap: 8px; padding: 4px 0;
+  }
+  .toc-item:hover { color: var(--text1); }
+  .toc-num { font-family: var(--mono); font-size: 10px; color: var(--text3); min-width: 20px; }
+
+  /* Sections */
+  .section { margin-bottom: 48px; }
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .section-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .section-header h2 { font-size: 18px; font-weight: 700; color: var(--text1); }
+  .section-header .section-sub { font-size: 12px; color: var(--text3); }
+
+  /* Concept cards */
+  .concept-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .concept-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; position: relative; overflow: hidden;
+  }
+  .concept-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .concept-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .concept-card p { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .concept-card .badge {
+    display: inline-block; font-size: 9px; font-weight: 700; font-family: var(--mono);
+    padding: 2px 6px; border-radius: 3px; margin-top: 10px; letter-spacing: 0.05em;
+  }
+
+  .card-purple::before { background: var(--purple); } .card-purple h3 { color: var(--purple); }
+  .card-blue::before { background: var(--blue); } .card-blue h3 { color: var(--blue); }
+  .card-green::before { background: var(--green); } .card-green h3 { color: var(--green); }
+  .card-amber::before { background: var(--amber); } .card-amber h3 { color: var(--amber); }
+  .card-teal::before { background: var(--teal); } .card-teal h3 { color: var(--teal); }
+  .card-coral::before { background: var(--coral); } .card-coral h3 { color: var(--coral); }
+
+  /* Flow diagrams */
+  .flow {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; margin-bottom: 24px;
+  }
+  .flow-title {
+    font-size: 11px; font-weight: 700; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px;
+  }
+  .flow-steps { display: flex; flex-wrap: wrap; align-items: center; gap: 0; }
+  .flow-step {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 8px; padding: 10px 16px; position: relative;
+  }
+  .flow-step .step-num {
+    font-size: 9px; font-family: var(--mono); color: var(--text3);
+    margin-bottom: 2px;
+  }
+  .flow-step .step-text { font-size: 12px; color: var(--text2); }
+  .flow-step .step-detail { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .flow-arrow {
+    color: var(--text3); font-size: 16px; padding: 0 8px; flex-shrink: 0;
+  }
+
+  /* Status reference */
+  .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 24px; }
+  .status-chip {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .status-label { font-size: 12px; font-weight: 600; }
+  .status-desc { font-size: 10px; color: var(--text3); }
+
+  /* Tips */
+  .tip {
+    background: var(--teal-bg); border: 1px solid var(--teal-border);
+    border-radius: 10px; padding: 16px 20px; margin-bottom: 16px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .tip-text { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .tip-text strong { color: var(--teal); }
+
+  /* Keyboard */
+  kbd {
+    display: inline-block; background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 4px; padding: 1px 6px; font-family: var(--mono);
+    font-size: 10px; color: var(--text2);
+  }
+
+  /* Feature list */
+  .feature-list { list-style: none; padding: 0; }
+  .feature-list li {
+    font-size: 12px; color: var(--text2); padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .feature-list li:last-child { border-bottom: none; }
+  .feature-list .feat-icon { font-size: 12px; flex-shrink: 0; margin-top: 2px; }
+
+  /* Diagram: hierarchy */
+  .hierarchy {
+    font-family: var(--mono); font-size: 12px; color: var(--text2);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 24px; margin-bottom: 24px;
+    line-height: 2;
+  }
+  .h-product { color: var(--purple); font-weight: 700; }
+  .h-story { color: var(--blue); }
+  .h-task { color: var(--amber); }
+  .h-subtask { color: var(--teal); }
+  .h-note { color: var(--slate); font-style: italic; }
+  .h-indent { padding-left: 24px; display: block; }
+  .h-indent2 { padding-left: 48px; display: block; }
+  .h-indent3 { padding-left: 72px; display: block; }
+  .h-indent4 { padding-left: 96px; display: block; }
+  .h-dim { color: var(--text3); }
+
+  /* Quick ref table */
+  .ref-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  .ref-table th {
+    text-align: left; font-size: 10px; font-weight: 700; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.1em;
+    padding: 8px 12px; border-bottom: 2px solid var(--border);
+  }
+  .ref-table td {
+    font-size: 12px; color: var(--text2); padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ref-table td:first-child { font-weight: 600; color: var(--text1); }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .flow-steps { flex-direction: column; gap: 0; }
+    .flow-arrow { transform: rotate(90deg); padding: 4px 0; }
+    .concept-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="guide">
+
+  <!-- ── HEADER ── -->
+  <div class="guide-header">
+    <h1>Sprint Tracker</h1>
+    <p>A lightweight tool for managing product backlogs, user stories, sprints, and tasks.</p>
+    <span class="version">v1.0 &middot; User Guide</span>
+    <div class="nav-links">
+      <a class="nav-link green" href="diagrams/plan-progress.html">&#128200; Project Progress (88%)</a>
+      <a class="nav-link purple" href="plans/2026-04-01-002-feat-sprint-tracker-roadmap-plan.md">&#128506; Development Roadmap</a>
+    </div>
+  </div>
+
+  <!-- ── TABLE OF CONTENTS ── -->
+  <div class="toc">
+    <div class="toc-title">In This Guide</div>
+    <div class="toc-grid">
+      <a class="toc-item" href="#concepts"><span class="toc-num">01</span> Key Concepts</a>
+      <a class="toc-item" href="#hierarchy"><span class="toc-num">02</span> Work Hierarchy</a>
+      <a class="toc-item" href="#workflow"><span class="toc-num">03</span> Typical Workflow</a>
+      <a class="toc-item" href="#backlog"><span class="toc-num">04</span> Product Backlog</a>
+      <a class="toc-item" href="#sprints"><span class="toc-num">05</span> Sprints</a>
+      <a class="toc-item" href="#stories"><span class="toc-num">06</span> User Stories</a>
+      <a class="toc-item" href="#tasks"><span class="toc-num">07</span> Tasks & Subtasks</a>
+      <a class="toc-item" href="#collab"><span class="toc-num">08</span> Collaboration</a>
+      <a class="toc-item" href="#quicksubmit"><span class="toc-num">09</span> Quick Submit</a>
+      <a class="toc-item" href="#statuses"><span class="toc-num">10</span> Status Reference</a>
+      <a class="toc-item" href="#settings"><span class="toc-num">11</span> Settings</a>
+      <a class="toc-item" href="#tips"><span class="toc-num">12</span> Tips & Tricks</a>
+    </div>
+  </div>
+
+  <!-- ── 1. KEY CONCEPTS ── -->
+  <div class="section" id="concepts">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--purple-bg);border:1px solid var(--purple-border)">&#x1F4A1;</div>
+      <div><h2>Key Concepts</h2><div class="section-sub">The building blocks of your project</div></div>
+    </div>
+    <div class="concept-row">
+      <div class="concept-card card-purple">
+        <h3>Product</h3>
+        <p>A product or area of your project. Stories belong to a product. Products appear in the sidebar with their own backlog view.</p>
+        <span class="badge" style="background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-border)">Organise</span>
+      </div>
+      <div class="concept-card card-blue">
+        <h3>User Story</h3>
+        <p>A feature or requirement described from the user's perspective. Stories live in the backlog until moved into a sprint. Prefixed <strong>S-1</strong>, <strong>S-2</strong>, etc.</p>
+        <span class="badge" style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)">Plan</span>
+      </div>
+      <div class="concept-card card-green">
+        <h3>Sprint</h3>
+        <p>A time-boxed period (usually 1-2 weeks) where the team commits to delivering specific stories and tasks. Has a start date, end date, and goal.</p>
+        <span class="badge" style="background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)">Deliver</span>
+      </div>
+    </div>
+    <div class="concept-row">
+      <div class="concept-card card-amber">
+        <h3>Task</h3>
+        <p>A concrete piece of work within a sprint. Tasks can belong to a story or stand alone. Track status as Open, In Progress, or Done. Prefixed <strong>T-1</strong>, <strong>T-2</strong>, etc.</p>
+        <span class="badge" style="background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)">Execute</span>
+      </div>
+      <div class="concept-card card-teal">
+        <h3>Subtask</h3>
+        <p>A smaller unit of work nested under a task. Subtasks inherit the parent task's assignee by default. Prefixed <strong>ST-1</strong>, <strong>ST-2</strong>, etc.</p>
+        <span class="badge" style="background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-border)">Break Down</span>
+      </div>
+      <div class="concept-card card-coral">
+        <h3>Note</h3>
+        <p>A comment attached to any story, task, or subtask. Notes notify the assignee. You have 5 minutes to edit after posting.</p>
+        <span class="badge" style="background:var(--coral-bg);color:var(--coral);border:1px solid var(--coral-border)">Discuss</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. WORK HIERARCHY ── -->
+  <div class="section" id="hierarchy">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--blue-bg);border:1px solid var(--blue-border)">&#x1F3D7;</div>
+      <div><h2>Work Hierarchy</h2><div class="section-sub">How everything fits together</div></div>
+    </div>
+    <div class="hierarchy">
+      <span class="h-product">&#9632; Mobile App</span> <span class="h-dim">(Product)</span>
+      <span class="h-indent"><span class="h-story">&#9656; S-1: User authentication</span> <span class="h-dim">(Story &mdash; in Sprint 1)</span></span>
+      <span class="h-indent2"><span class="h-task">&#9654; T-1: Build login form</span> <span class="h-dim">(Task &mdash; assigned to Alice)</span></span>
+      <span class="h-indent3"><span class="h-subtask">&#8627; ST-1: Style the form</span> <span class="h-dim">(Subtask)</span></span>
+      <span class="h-indent3"><span class="h-subtask">&#8627; ST-2: Add validation</span> <span class="h-dim">(Subtask)</span></span>
+      <span class="h-indent3"><span class="h-note">&#9998; "Started working on layout" &mdash; Alice, 2h ago</span> <span class="h-dim">(Note)</span></span>
+      <span class="h-indent2"><span class="h-task">&#9654; T-2: Add OAuth provider</span> <span class="h-dim">(Task &mdash; assigned to Bob)</span></span>
+      <span class="h-indent"><span class="h-story">&#9656; S-2: Dashboard widgets</span> <span class="h-dim">(Story &mdash; backlog)</span></span>
+      <br>
+      <span class="h-product">&#9632; API Platform</span> <span class="h-dim">(Product)</span>
+      <span class="h-indent"><span class="h-story">&#9656; S-3: Rate limiting</span> <span class="h-dim">(Story &mdash; backlog)</span></span>
+    </div>
+    <div class="tip">
+      <span class="tip-icon">&#9432;</span>
+      <span class="tip-text">The sidebar shows your <strong>product tree</strong> with a count of backlog stories per product. Click any product to jump straight to its backlog.</span>
+    </div>
+  </div>
+
+  <!-- ── 3. TYPICAL WORKFLOW ── -->
+  <div class="section" id="workflow">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--green-bg);border:1px solid var(--green-border)">&#x1F504;</div>
+      <div><h2>Typical Workflow</h2><div class="section-sub">From idea to done</div></div>
+    </div>
+    <div class="flow">
+      <div class="flow-title">The Sprint Cycle</div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="step-num">1</div>
+          <div class="step-text" style="color:var(--purple)">Add stories to backlog</div>
+          <div class="step-detail">Capture features, bugs, ideas</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="step-num">2</div>
+          <div class="step-text" style="color:var(--blue)">Prioritise & organise</div>
+          <div class="step-detail">Drag to reorder, assign products</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="step-num">3</div>
+          <div class="step-text" style="color:var(--green)">Create a sprint</div>
+          <div class="step-detail">Set dates, goal, folder</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="step-num">4</div>
+          <div class="step-text" style="color:var(--amber)">Move stories into sprint</div>
+          <div class="step-detail">Commit to scope</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="step-num">5</div>
+          <div class="step-text" style="color:var(--teal)">Break into tasks</div>
+          <div class="step-detail">Create tasks, assign team</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="step-num">6</div>
+          <div class="step-text" style="color:var(--coral)">Work the board</div>
+          <div class="step-detail">Open &#8594; In Progress &#8594; Done</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4. PRODUCT BACKLOG ── -->
+  <div class="section" id="backlog">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--purple-bg);border:1px solid var(--purple-border)">&#x1F4CB;</div>
+      <div><h2>Product Backlog</h2><div class="section-sub">Your prioritised list of work</div></div>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+      The backlog is where all stories live before they enter a sprint. Each product has its own backlog view, or you can see everything in <strong>All Backlogs</strong>.
+    </p>
+    <div class="flow">
+      <div class="flow-title">Backlog Actions</div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="step-text" style="color:var(--purple)">Add Story</div>
+          <div class="step-detail">Title, type, product, priority</div>
+        </div>
+        <div class="flow-arrow">&middot;</div>
+        <div class="flow-step">
+          <div class="step-text" style="color:var(--blue)">Drag to Reorder</div>
+          <div class="step-detail">Priority order is preserved</div>
+        </div>
+        <div class="flow-arrow">&middot;</div>
+        <div class="flow-step">
+          <div class="step-text" style="color:var(--green)">Move to Sprint</div>
+          <div class="step-detail">Select target sprint from dropdown</div>
+        </div>
+        <div class="flow-arrow">&middot;</div>
+        <div class="flow-step">
+          <div class="step-text" style="color:var(--amber)">Assign</div>
+          <div class="step-detail">Assignee, customer, priority</div>
+        </div>
+      </div>
+    </div>
+    <div class="tip">
+      <span class="tip-icon">&#9889;</span>
+      <span class="tip-text"><strong>Story types:</strong> Use <strong>User Story</strong> for features, <strong>Bug</strong> for defects, <strong>Feature Request</strong> for ideas. The type badge shows on every card.</span>
+    </div>
+  </div>
+
+  <!-- ── 5. SPRINTS ── -->
+  <div class="section" id="sprints">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--green-bg);border:1px solid var(--green-border)">&#x1F3C3;</div>
+      <div><h2>Sprints</h2><div class="section-sub">Time-boxed delivery cycles</div></div>
+    </div>
+    <table class="ref-table">
+      <thead><tr><th>Action</th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td>Create sprint</td><td>Sprint Overview &#8594; <strong>New Sprint</strong> &#8594; Name, dates, goal, folder</td></tr>
+        <tr><td>Start sprint</td><td>Sprint detail &#8594; Click <strong>Active</strong> button</td></tr>
+        <tr><td>View progress</td><td>Sprint detail shows task stats + progress bar</td></tr>
+        <tr><td>Switch views</td><td>Toggle between <strong>Kanban board</strong> and <strong>List view</strong></td></tr>
+        <tr><td>Complete sprint</td><td>Sprint detail &#8594; Click <strong>Completed</strong> button</td></tr>
+        <tr><td>Organise</td><td>Use <strong>folders</strong> to group related sprints</td></tr>
+      </tbody>
+    </table>
+    <div class="flow">
+      <div class="flow-title">Sprint Lifecycle</div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="step-text" style="color:var(--amber)">Planning</div>
+          <div class="step-detail">Add stories &amp; tasks</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="step-text" style="color:var(--green)">Active</div>
+          <div class="step-detail">Team works the board</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="step-text" style="color:var(--blue)">Completed</div>
+          <div class="step-detail">Sprint closed &amp; archived</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6. USER STORIES ── -->
+  <div class="section" id="stories">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--blue-bg);border:1px solid var(--blue-border)">&#x1F4D6;</div>
+      <div><h2>User Stories</h2><div class="section-sub">Features described from the user's perspective</div></div>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+      Stories are the main planning unit. They start in the backlog, get pulled into sprints, and contain tasks that break down the work.
+    </p>
+    <table class="ref-table">
+      <thead><tr><th>Action</th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td>Create story</td><td>Backlog page &#8594; <strong>Add Story</strong>, or use the Quick Submit button</td></tr>
+        <tr><td>View details</td><td>Click any story to see description, tasks, notes, and metadata</td></tr>
+        <tr><td>Move to sprint</td><td>Backlog &#8594; story card &#8594; <strong>Move to Sprint</strong> dropdown</td></tr>
+        <tr><td>Add tasks</td><td>Story detail &#8594; <strong>Add Task</strong> (tasks automatically link to the story)</td></tr>
+        <tr><td>Delete story</td><td>Choose: <strong>Cascade</strong> (delete tasks too), <strong>Unlink</strong> (keep tasks), or <strong>Reassign</strong> (move tasks to another story)</td></tr>
+      </tbody>
+    </table>
+    <div class="tip">
+      <span class="tip-icon">&#128260;</span>
+      <span class="tip-text">You can <strong>convert a task into a story</strong> from the task detail page. This is useful when a task turns out to be bigger than expected and needs its own breakdown.</span>
+    </div>
+  </div>
+
+  <!-- ── 7. TASKS & SUBTASKS ── -->
+  <div class="section" id="tasks">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--amber-bg);border:1px solid var(--amber-border)">&#x2705;</div>
+      <div><h2>Tasks & Subtasks</h2><div class="section-sub">The hands-on work</div></div>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+      Tasks are the concrete work items your team executes during a sprint. Use subtasks to break them down further.
+    </p>
+    <div class="concept-row">
+      <div class="concept-card card-amber">
+        <h3>Kanban Board</h3>
+        <p>Tasks displayed in columns by status: <strong>Open</strong>, <strong>In Progress</strong>, <strong>Done</strong>. Change status by using the status selector on each card.</p>
+      </div>
+      <div class="concept-card card-teal">
+        <h3>List View</h3>
+        <p>Tasks in a filterable table. Filter by <strong>tags</strong> and <strong>customers</strong>. Great for bulk review and finding specific tasks.</p>
+      </div>
+    </div>
+    <table class="ref-table">
+      <thead><tr><th>Action</th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td>Create task</td><td>Sprint detail &#8594; <strong>Add Task</strong> under a story, or as a standalone task</td></tr>
+        <tr><td>Change status</td><td>Click the status badge on the card/row and select new status</td></tr>
+        <tr><td>Assign task</td><td>Task form &#8594; Assignee dropdown (team members)</td></tr>
+        <tr><td>Add subtask</td><td>Task detail &#8594; <strong>Add Subtask</strong> (inherits assignee from parent)</td></tr>
+        <tr><td>Move subtask</td><td>Subtask can be moved to a different parent task</td></tr>
+        <tr><td>Add tags</td><td>Task detail &#8594; Tags section &#8594; select from configured tags</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── 8. COLLABORATION ── -->
+  <div class="section" id="collab">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--coral-bg);border:1px solid var(--coral-border)">&#x1F514;</div>
+      <div><h2>Collaboration</h2><div class="section-sub">Notes & notifications</div></div>
+    </div>
+    <div class="concept-row">
+      <div class="concept-card card-coral">
+        <h3>Notes</h3>
+        <p>Add comments to any story, task, or subtask. The assignee is automatically notified. You have <strong>5 minutes</strong> to edit a note after posting.</p>
+      </div>
+      <div class="concept-card card-blue">
+        <h3>Notifications</h3>
+        <p>The bell icon in the header shows your unread count. You're notified when:</p>
+        <ul class="feature-list" style="margin-top:8px">
+          <li><span class="feat-icon" style="color:var(--green)">&#9654;</span> You're assigned to a story, task, or subtask</li>
+          <li><span class="feat-icon" style="color:var(--amber)">&#9654;</span> You're reassigned to something</li>
+          <li><span class="feat-icon" style="color:var(--coral)">&#9654;</span> Someone adds a note on your item</li>
+        </ul>
+      </div>
+    </div>
+    <div class="tip">
+      <span class="tip-icon">&#128276;</span>
+      <span class="tip-text">Click a notification to jump straight to the story, task, or subtask. Use <strong>Mark all as read</strong> to clear your badge. You'll never be notified about your own actions.</span>
+    </div>
+  </div>
+
+  <!-- ── 9. QUICK SUBMIT ── -->
+  <div class="section" id="quicksubmit">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--green-bg);border:1px solid var(--green-border)">&#x26A1;</div>
+      <div><h2>Quick Submit</h2><div class="section-sub">Rapidly capture bugs and ideas</div></div>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+      The floating green button in the bottom-right corner lets you quickly submit bugs or feature requests without leaving your current page.
+    </p>
+    <div class="flow">
+      <div class="flow-title">Quick Submit Flow</div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="step-num">1</div>
+          <div class="step-text" style="color:var(--green)">Click the green button</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="step-num">2</div>
+          <div class="step-text" style="color:var(--amber)">Choose Bug or Feature</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="step-num">3</div>
+          <div class="step-text" style="color:var(--blue)">Enter title + product</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="step-num">4</div>
+          <div class="step-text" style="color:var(--purple)">Submit to backlog</div>
+          <div class="step-detail">Appears instantly</div>
+        </div>
+      </div>
+    </div>
+    <div class="tip">
+      <span class="tip-icon">&#128161;</span>
+      <span class="tip-text">After submitting, the form keeps your <strong>type, product, and priority</strong> selections for quick sequential entries. Only the title and description reset.</span>
+    </div>
+  </div>
+
+  <!-- ── 10. STATUS REFERENCE ── -->
+  <div class="section" id="statuses">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--slate-bg);border:1px solid var(--slate-border)">&#x1F3F7;</div>
+      <div><h2>Status Reference</h2><div class="section-sub">Colours and meanings at a glance</div></div>
+    </div>
+
+    <p style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Sprint Status</p>
+    <div class="status-grid">
+      <div class="status-chip"><span class="status-dot" style="background:var(--amber)"></span><div><div class="status-label">Planning</div><div class="status-desc">Being prepared</div></div></div>
+      <div class="status-chip"><span class="status-dot" style="background:var(--green)"></span><div><div class="status-label">Active</div><div class="status-desc">In progress</div></div></div>
+      <div class="status-chip"><span class="status-dot" style="background:var(--blue)"></span><div><div class="status-label">Completed</div><div class="status-desc">Finished</div></div></div>
+    </div>
+
+    <p style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Task Status</p>
+    <div class="status-grid">
+      <div class="status-chip"><span class="status-dot" style="background:var(--amber)"></span><div><div class="status-label">Open</div><div class="status-desc">Not started</div></div></div>
+      <div class="status-chip"><span class="status-dot" style="background:var(--blue)"></span><div><div class="status-label">In Progress</div><div class="status-desc">Being worked on</div></div></div>
+      <div class="status-chip"><span class="status-dot" style="background:var(--green)"></span><div><div class="status-label">Done</div><div class="status-desc">Completed</div></div></div>
+    </div>
+
+    <p style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">Priority Levels</p>
+    <div class="status-grid">
+      <div class="status-chip"><span class="status-dot" style="background:var(--slate)"></span><div><div class="status-label">Low</div></div></div>
+      <div class="status-chip"><span class="status-dot" style="background:var(--blue)"></span><div><div class="status-label">Medium</div></div></div>
+      <div class="status-chip"><span class="status-dot" style="background:var(--amber)"></span><div><div class="status-label">High</div></div></div>
+      <div class="status-chip"><span class="status-dot" style="background:var(--rose)"></span><div><div class="status-label">Urgent</div></div></div>
+    </div>
+  </div>
+
+  <!-- ── 11. SETTINGS ── -->
+  <div class="section" id="settings">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--slate-bg);border:1px solid var(--slate-border)">&#x2699;</div>
+      <div><h2>Settings</h2><div class="section-sub">Configure your workspace</div></div>
+    </div>
+    <div class="concept-row">
+      <div class="concept-card card-amber">
+        <h3>Tags</h3>
+        <p>Create colour-coded tags to categorise tasks (e.g. "frontend", "backend", "design"). Apply multiple tags per task and filter by tag in list view.</p>
+      </div>
+      <div class="concept-card card-coral">
+        <h3>Customers</h3>
+        <p>Track which customer or stakeholder requested work. Assign customers to stories and tasks for visibility and reporting.</p>
+      </div>
+    </div>
+    <div class="concept-row">
+      <div class="concept-card card-purple">
+        <h3>Products</h3>
+        <p>Define your product areas with colours. Products support a two-level hierarchy (parent/child). Each product gets its own backlog view in the sidebar.</p>
+      </div>
+      <div class="concept-card card-teal">
+        <h3>ClickUp Integration</h3>
+        <p>Connect to ClickUp to push tasks automatically. Link sprints to ClickUp lists and task status changes sync in real-time (one-way: Tracker &#8594; ClickUp).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 12. TIPS ── -->
+  <div class="section" id="tips">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--teal-bg);border:1px solid var(--teal-border)">&#x1F4A1;</div>
+      <div><h2>Tips & Tricks</h2><div class="section-sub">Get the most out of Sprint Tracker</div></div>
+    </div>
+    <div class="tip">
+      <span class="tip-icon">&#128640;</span>
+      <span class="tip-text"><strong>Quick Submit is your friend.</strong> Spotted a bug while working? Hit the green button, type a title, and get back to what you were doing. It goes straight to the backlog.</span>
+    </div>
+    <div class="tip">
+      <span class="tip-icon">&#128194;</span>
+      <span class="tip-text"><strong>Use folders for sprint organisation.</strong> Group sprints by quarter, team, or project. Completed sprints move to a separate section automatically.</span>
+    </div>
+    <div class="tip">
+      <span class="tip-icon">&#127912;</span>
+      <span class="tip-text"><strong>Colour your products.</strong> Each product gets a colour dot in the sidebar and on story cards. This makes it easy to see which product area work belongs to at a glance.</span>
+    </div>
+    <div class="tip">
+      <span class="tip-icon">&#128257;</span>
+      <span class="tip-text"><strong>Drag stories to prioritise.</strong> In the backlog, drag stories up and down to set priority order. This order is preserved and visible to the whole team.</span>
+    </div>
+    <div class="tip">
+      <span class="tip-icon">&#128276;</span>
+      <span class="tip-text"><strong>Check your notifications.</strong> The bell icon updates every 30 seconds. Click a notification to jump straight to the relevant item.</span>
+    </div>
+    <div class="tip">
+      <span class="tip-icon">&#128736;</span>
+      <span class="tip-text"><strong>Convert tasks to stories.</strong> If a task grows too big, open its detail page and use "Convert to Story". Notes and context carry over.</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
